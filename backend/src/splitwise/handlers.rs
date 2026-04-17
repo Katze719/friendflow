@@ -385,25 +385,18 @@ pub async fn delete_expense(
 ) -> AppResult<Json<serde_json::Value>> {
     ensure_member(&state, group_id, user.id).await?;
 
-    let row: Option<(Uuid,)> = sqlx::query_as(
-        "SELECT created_by FROM expenses WHERE id = $1 AND group_id = $2",
+    // Any group member can delete expenses inside their group.
+    let result = sqlx::query(
+        "DELETE FROM expenses WHERE id = $1 AND group_id = $2",
     )
     .bind(expense_id)
     .bind(group_id)
-    .fetch_optional(&state.db)
+    .execute(&state.db)
     .await?;
 
-    let Some((created_by,)) = row else {
+    if result.rows_affected() == 0 {
         return Err(AppError::NotFound("expense not found".into()));
-    };
-    if created_by != user.id && !user.is_admin {
-        return Err(AppError::Forbidden);
     }
-
-    sqlx::query("DELETE FROM expenses WHERE id = $1")
-        .bind(expense_id)
-        .execute(&state.db)
-        .await?;
 
     Ok(Json(serde_json::json!({ "ok": true })))
 }

@@ -121,20 +121,18 @@ pub async fn update_event(
     payload.validate()?;
     crate::groups::ensure_member(&state, group_id, user.id).await?;
 
-    let existing: Option<(Uuid, DateTime<Utc>, Option<DateTime<Utc>>)> = sqlx::query_as(
-        "SELECT created_by, starts_at, ends_at FROM calendar_events \
+    // Any group member can edit events inside their group.
+    let existing: Option<(DateTime<Utc>, Option<DateTime<Utc>>)> = sqlx::query_as(
+        "SELECT starts_at, ends_at FROM calendar_events \
          WHERE id = $1 AND group_id = $2",
     )
     .bind(event_id)
     .bind(group_id)
     .fetch_optional(&state.db)
     .await?;
-    let Some((created_by, cur_start, cur_end)) = existing else {
+    let Some((cur_start, cur_end)) = existing else {
         return Err(AppError::NotFound("event not found".into()));
     };
-    if created_by != user.id {
-        return Err(AppError::Forbidden);
-    }
 
     let new_start = payload.starts_at.unwrap_or(cur_start);
     let new_end = match &payload.ends_at {
@@ -176,24 +174,18 @@ pub async fn delete_event(
 ) -> AppResult<Json<serde_json::Value>> {
     crate::groups::ensure_member(&state, group_id, user.id).await?;
 
-    let owner: Option<(Uuid,)> = sqlx::query_as(
-        "SELECT created_by FROM calendar_events WHERE id = $1 AND group_id = $2",
+    // Any group member can delete events inside their group.
+    let result = sqlx::query(
+        "DELETE FROM calendar_events WHERE id = $1 AND group_id = $2",
     )
     .bind(event_id)
     .bind(group_id)
-    .fetch_optional(&state.db)
+    .execute(&state.db)
     .await?;
-    let Some((created_by,)) = owner else {
-        return Err(AppError::NotFound("event not found".into()));
-    };
-    if created_by != user.id {
-        return Err(AppError::Forbidden);
-    }
 
-    sqlx::query("DELETE FROM calendar_events WHERE id = $1")
-        .bind(event_id)
-        .execute(&state.db)
-        .await?;
+    if result.rows_affected() == 0 {
+        return Err(AppError::NotFound("event not found".into()));
+    }
     Ok(Json(serde_json::json!({ "ok": true })))
 }
 

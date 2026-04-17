@@ -13,6 +13,7 @@ pub fn routes() -> Router<AppState> {
         .route("/", get(handlers::list).post(handlers::create))
         .route("/join", post(handlers::join))
         .route("/:id", get(handlers::detail).delete(handlers::delete_group))
+        .route("/:id/leave", post(handlers::leave))
         // Tool-specific nested routes live under `/:id/<tool>/...`.
         .nest("/:id/splitwise", crate::splitwise::routes())
         .nest("/:id/trips", crate::trips::routes())

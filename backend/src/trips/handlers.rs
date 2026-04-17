@@ -117,19 +117,17 @@ pub async fn update_link(
     payload.validate()?;
     crate::groups::ensure_member(&state, group_id, user.id).await?;
 
-    // Only the user who added a link may edit its note.
-    let owner: Option<(Uuid,)> = sqlx::query_as(
-        "SELECT added_by FROM trip_links WHERE id = $1 AND group_id = $2",
+    // Any group member may edit a link; we still need to make sure the link
+    // exists within this group.
+    let exists: Option<(Uuid,)> = sqlx::query_as(
+        "SELECT id FROM trip_links WHERE id = $1 AND group_id = $2",
     )
     .bind(link_id)
     .bind(group_id)
     .fetch_optional(&state.db)
     .await?;
-    let Some((added_by,)) = owner else {
+    if exists.is_none() {
         return Err(AppError::NotFound("link not found".into()));
-    };
-    if added_by != user.id {
-        return Err(AppError::Forbidden);
     }
 
     if let Some(note) = payload.note.as_deref() {
@@ -151,25 +149,19 @@ pub async fn delete_link(
 ) -> AppResult<Json<serde_json::Value>> {
     crate::groups::ensure_member(&state, group_id, user.id).await?;
 
-    // Creator-only for now; owners of the group could be allowed later.
-    let owner: Option<(Uuid,)> = sqlx::query_as(
-        "SELECT added_by FROM trip_links WHERE id = $1 AND group_id = $2",
+    // Any group member can delete links inside their group. The group-id
+    // filter guarantees we don't touch other groups' data.
+    let result = sqlx::query(
+        "DELETE FROM trip_links WHERE id = $1 AND group_id = $2",
     )
     .bind(link_id)
     .bind(group_id)
-    .fetch_optional(&state.db)
+    .execute(&state.db)
     .await?;
-    let Some((added_by,)) = owner else {
-        return Err(AppError::NotFound("link not found".into()));
-    };
-    if added_by != user.id {
-        return Err(AppError::Forbidden);
-    }
 
-    sqlx::query("DELETE FROM trip_links WHERE id = $1")
-        .bind(link_id)
-        .execute(&state.db)
-        .await?;
+    if result.rows_affected() == 0 {
+        return Err(AppError::NotFound("link not found".into()));
+    }
 
     Ok(Json(serde_json::json!({ "ok": true })))
 }

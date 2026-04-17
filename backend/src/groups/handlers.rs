@@ -268,6 +268,78 @@ pub async fn detail(
     }))
 }
 
+/// Removes the current user from a group they're a member of. If they were
+/// the group's only owner but members remain, the earliest-joined remaining
+/// member is promoted to owner so the group never ends up ownerless. If the
+/// leaving user was the very last member, the (now empty) group is deleted.
+pub async fn leave(
+    State(state): State<AppState>,
+    user: AuthUser,
+    Path(id): Path<Uuid>,
+) -> AppResult<Json<serde_json::Value>> {
+    let mut tx = state.db.begin().await?;
+
+    let row: Option<(String,)> = sqlx::query_as(
+        "SELECT role FROM group_members WHERE group_id = $1 AND user_id = $2",
+    )
+    .bind(id)
+    .bind(user.id)
+    .fetch_optional(&mut *tx)
+    .await?;
+    let Some((role,)) = row else {
+        return Err(AppError::NotFound("you are not a member of this group".into()));
+    };
+
+    sqlx::query("DELETE FROM group_members WHERE group_id = $1 AND user_id = $2")
+        .bind(id)
+        .bind(user.id)
+        .execute(&mut *tx)
+        .await?;
+
+    let remaining: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*)::BIGINT FROM group_members WHERE group_id = $1",
+    )
+    .bind(id)
+    .fetch_one(&mut *tx)
+    .await?;
+
+    if remaining.0 == 0 {
+        sqlx::query("DELETE FROM groups WHERE id = $1")
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
+        tx.commit().await?;
+        return Ok(Json(serde_json::json!({ "ok": true, "group_deleted": true })));
+    }
+
+    if role == "owner" {
+        let has_owner: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*)::BIGINT FROM group_members WHERE group_id = $1 AND role = 'owner'",
+        )
+        .bind(id)
+        .fetch_one(&mut *tx)
+        .await?;
+
+        if has_owner.0 == 0 {
+            sqlx::query(
+                "UPDATE group_members SET role = 'owner' \
+                 WHERE user_id = ( \
+                     SELECT user_id FROM group_members \
+                     WHERE group_id = $1 \
+                     ORDER BY joined_at ASC \
+                     LIMIT 1 \
+                 ) AND group_id = $1",
+            )
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
+        }
+    }
+
+    tx.commit().await?;
+    Ok(Json(serde_json::json!({ "ok": true, "group_deleted": false })))
+}
+
 pub async fn delete_group(
     State(state): State<AppState>,
     user: AuthUser,

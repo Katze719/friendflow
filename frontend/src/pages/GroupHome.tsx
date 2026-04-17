@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, Copy, Link2, Share2, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Copy, Link2, LogOut, Share2, Trash2 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -70,6 +70,17 @@ export default function GroupHome() {
     if (!confirm(t("group.deleteConfirm", { name: group.name }))) return;
     try {
       await groupsApi.delete(group.id);
+      navigate("/");
+    } catch (e) {
+      alert(e instanceof ApiError ? e.message : t("common.error"));
+    }
+  }
+
+  async function onLeave() {
+    if (!group) return;
+    if (!confirm(t("group.leaveConfirm", { name: group.name }))) return;
+    try {
+      await groupsApi.leave(group.id);
       navigate("/");
     } catch (e) {
       alert(e instanceof ApiError ? e.message : t("common.error"));
@@ -232,17 +243,27 @@ export default function GroupHome() {
             </p>
           </div>
 
-          {isOwner && (
-            <div className="border-t border-slate-100 pt-3 dark:border-slate-800">
+          <div className="border-t border-slate-100 pt-3 dark:border-slate-800">
+            <div className="flex flex-wrap items-center gap-2">
               <button
-                className="btn-ghost text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40"
-                onClick={onDelete}
+                className="btn-ghost text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                onClick={onLeave}
               >
-                <Trash2 className="h-4 w-4" /> {t("group.delete")}
+                <LogOut className="h-4 w-4" /> {t("group.leave")}
               </button>
-              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t("group.deleteHint")}</p>
+              {isOwner && (
+                <button
+                  className="btn-ghost text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40"
+                  onClick={onDelete}
+                >
+                  <Trash2 className="h-4 w-4" /> {t("group.delete")}
+                </button>
+              )}
             </div>
-          )}
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              {isOwner ? t("group.ownerActionsHint") : t("group.leaveHint")}
+            </p>
+          </div>
         </div>
       </section>
     </div>

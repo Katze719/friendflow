@@ -14,14 +14,12 @@ import { Link, useParams } from "react-router-dom";
 import { ApiError } from "../../api/client";
 import { groupsApi } from "../../api/groups";
 import type { GroupDetail, TripLink } from "../../api/types";
-import { useAuth } from "../../context/AuthContext";
 import { formatDate } from "../../lib/format";
 import { tripsApi } from "./api";
 
 export default function TripsOverviewPage() {
   const { t } = useTranslation();
   const { groupId } = useParams<{ groupId: string }>();
-  const { user } = useAuth();
   const [group, setGroup] = useState<GroupDetail | null>(null);
   const [links, setLinks] = useState<TripLink[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -107,7 +105,6 @@ export default function TripsOverviewPage() {
               key={link.id}
               link={link}
               groupId={group.id}
-              isMine={link.added_by === user?.id}
               onChanged={reload}
               onReplace={(updated) =>
                 setLinks((prev) =>
@@ -127,13 +124,11 @@ export default function TripsOverviewPage() {
 function LinkCard({
   link,
   groupId,
-  isMine,
   onChanged,
   onReplace,
 }: {
   link: TripLink;
   groupId: string;
-  isMine: boolean;
   onChanged: () => void;
   onReplace: (updated: TripLink) => void;
 }) {
@@ -329,22 +324,19 @@ function LinkCard({
           <button
             type="button"
             className="w-full text-left text-sm italic text-slate-700 hover:underline dark:text-slate-300"
-            onClick={() => isMine && setEditing(true)}
-            disabled={!isMine}
-            title={isMine ? t("trips.overview.editNote") : undefined}
+            onClick={() => setEditing(true)}
+            title={t("trips.overview.editNote")}
           >
             "{link.note}"
           </button>
         ) : (
-          isMine && (
-            <button
-              type="button"
-              className="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-              onClick={() => setEditing(true)}
-            >
-              + {t("trips.overview.addNote")}
-            </button>
-          )
+          <button
+            type="button"
+            className="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+            onClick={() => setEditing(true)}
+          >
+            + {t("trips.overview.addNote")}
+          </button>
         )}
 
         <div className="mt-3 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
@@ -367,18 +359,16 @@ function LinkCard({
                 className={`h-3.5 w-3.5 ${busy === "refresh" ? "animate-spin" : ""}`}
               />
             </button>
-            {isMine && (
-              <button
-                type="button"
-                className="btn-ghost -my-1 text-slate-400 hover:text-rose-600 dark:text-slate-500 dark:hover:text-rose-400"
-                onClick={onDelete}
-                disabled={busy === "delete"}
-                aria-label={t("common.delete")}
-                title={t("common.delete")}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            )}
+            <button
+              type="button"
+              className="btn-ghost -my-1 text-slate-400 hover:text-rose-600 dark:text-slate-500 dark:hover:text-rose-400"
+              onClick={onDelete}
+              disabled={busy === "delete"}
+              aria-label={t("common.delete")}
+              title={t("common.delete")}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
           </div>
         </div>
       </div>

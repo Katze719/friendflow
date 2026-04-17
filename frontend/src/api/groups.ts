@@ -16,4 +16,9 @@ export const groupsApi = {
   get: (id: string) => api<GroupDetail>(`/api/groups/${id}`),
   delete: (id: string) =>
     api<{ ok: boolean }>(`/api/groups/${id}`, { method: "DELETE" }),
+  leave: (id: string) =>
+    api<{ ok: boolean; group_deleted: boolean }>(
+      `/api/groups/${id}/leave`,
+      { method: "POST" },
+    ),
 };

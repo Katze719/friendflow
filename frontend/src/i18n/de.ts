@@ -115,6 +115,13 @@ const de: Translations = {
     delete: "Gruppe löschen",
     deleteHint: "Löscht die Gruppe und alle Tool-Daten unwiderruflich.",
     deleteConfirm: '"{{name}}" und alle Daten wirklich löschen?',
+    leave: "Gruppe verlassen",
+    leaveHint:
+      "Die Gruppe verschwindet aus deinem Dashboard. Mit einem neuen Invite kannst du jederzeit wieder beitreten.",
+    leaveConfirm:
+      '"{{name}}" wirklich verlassen? Für einen Rückkehr brauchst du einen neuen Invite.',
+    ownerActionsHint:
+      "Als Owner kannst du die Gruppe löschen. Wenn du verlässt, geht die Owner-Rolle an das nächste Mitglied über.",
     more: {
       title: "Mehr folgt",
       description:
@@ -162,7 +169,7 @@ const de: Translations = {
       paidBy: "gezahlt von {{name}}",
       breakdown: "Aufteilung",
       deleteConfirm: 'Ausgabe "{{description}}" wirklich löschen?',
-      deleteTooltip: "Löschen (nur Ersteller)",
+      deleteTooltip: "Löschen",
       deleteAria: "Ausgabe löschen",
     },
     newExpense: {

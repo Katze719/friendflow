@@ -24,7 +24,6 @@ import DayPicker from "../../components/DayPicker";
 import MonthCalendar, {
   type DayBadge,
 } from "../../components/MonthCalendar";
-import { useAuth } from "../../context/AuthContext";
 import {
   addDays,
   formatDayLong,
@@ -41,11 +40,10 @@ type View = "agenda" | "month";
 export default function CalendarOverviewPage() {
   const { t } = useTranslation();
   const { groupId } = useParams<{ groupId: string }>();
-  const { user } = useAuth();
   const [group, setGroup] = useState<GroupDetail | null>(null);
   const [events, setEvents] = useState<CalendarEvent[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [view, setView] = useState<View>("agenda");
+  const [view, setView] = useState<View>("month");
   const [visibleMonth, setVisibleMonth] = useState<Date>(() =>
     startOfMonth(new Date()),
   );
@@ -218,7 +216,6 @@ export default function CalendarOverviewPage() {
               title={t("calendar.overview.upcoming")}
               events={upcoming}
               groupId={group.id}
-              userId={user?.id}
               onChanged={reload}
               onEdit={openEdit}
               empty={t("calendar.overview.noUpcoming")}
@@ -233,7 +230,6 @@ export default function CalendarOverviewPage() {
                     title={t("calendar.overview.past")}
                     events={past}
                     groupId={group.id}
-                    userId={user?.id}
                     onChanged={reload}
                     onEdit={openEdit}
                     empty=""
@@ -283,7 +279,6 @@ export default function CalendarOverviewPage() {
                         key={ev.id}
                         event={ev}
                         groupId={group.id}
-                        isMine={ev.created_by === user?.id}
                         onChanged={reload}
                         onEdit={() => openEdit(ev)}
                         dim={false}
@@ -349,7 +344,6 @@ function EventSection({
   title,
   events,
   groupId,
-  userId,
   onChanged,
   onEdit,
   empty,
@@ -358,7 +352,6 @@ function EventSection({
   title: string;
   events: CalendarEvent[];
   groupId: string;
-  userId: string | undefined;
   onChanged: () => void;
   onEdit: (ev: CalendarEvent) => void;
   empty: string;
@@ -380,7 +373,6 @@ function EventSection({
               key={ev.id}
               event={ev}
               groupId={groupId}
-              isMine={ev.created_by === userId}
               onChanged={onChanged}
               onEdit={() => onEdit(ev)}
               dim={dim}
@@ -395,7 +387,6 @@ function EventSection({
 function EventCard({
   event,
   groupId,
-  isMine,
   onChanged,
   onEdit,
   dim,
@@ -403,7 +394,6 @@ function EventCard({
 }: {
   event: CalendarEvent;
   groupId: string;
-  isMine: boolean;
   onChanged: () => void;
   onEdit: () => void;
   dim: boolean;
@@ -496,30 +486,28 @@ function EventCard({
             })}
           </p>
         </div>
-        {isMine && (
-          <div className="flex shrink-0 flex-col gap-1">
-            <button
-              type="button"
-              className="btn-ghost -my-1"
-              onClick={onEdit}
-              aria-label={t("common.edit")}
-              title={t("common.edit")}
-              disabled={busy}
-            >
-              <Pencil className="h-3.5 w-3.5" />
-            </button>
-            <button
-              type="button"
-              className="btn-ghost -my-1 text-slate-400 hover:text-rose-600 dark:text-slate-500 dark:hover:text-rose-400"
-              onClick={onDelete}
-              aria-label={t("common.delete")}
-              title={t("common.delete")}
-              disabled={busy}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        )}
+        <div className="flex shrink-0 flex-col gap-1">
+          <button
+            type="button"
+            className="btn-ghost -my-1"
+            onClick={onEdit}
+            aria-label={t("common.edit")}
+            title={t("common.edit")}
+            disabled={busy}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            className="btn-ghost -my-1 text-slate-400 hover:text-rose-600 dark:text-slate-500 dark:hover:text-rose-400"
+            onClick={onDelete}
+            aria-label={t("common.delete")}
+            title={t("common.delete")}
+            disabled={busy}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
     </li>
   );

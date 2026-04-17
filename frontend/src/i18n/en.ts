@@ -113,6 +113,13 @@ const en = {
     delete: "Delete group",
     deleteHint: "Permanently deletes the group and all its tool data.",
     deleteConfirm: 'Really delete "{{name}}" and all its data?',
+    leave: "Leave group",
+    leaveHint:
+      "You'll stop seeing this group on your dashboard. Rejoin any time with a new invite.",
+    leaveConfirm:
+      'Leave "{{name}}"? You will need a new invite to come back.',
+    ownerActionsHint:
+      "As owner you can delete the group. Leaving transfers ownership to the next member.",
     more: {
       title: "More coming",
       description:
@@ -160,7 +167,7 @@ const en = {
       paidBy: "paid by {{name}}",
       breakdown: "Breakdown",
       deleteConfirm: 'Really delete the expense "{{description}}"?',
-      deleteTooltip: "Delete (creator only)",
+      deleteTooltip: "Delete",
       deleteAria: "Delete expense",
     },
     newExpense: {
