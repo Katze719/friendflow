@@ -35,6 +35,19 @@ export default function Login() {
 
   return (
     <div className="mx-auto flex min-h-full max-w-md flex-col justify-center py-12">
+      <Link
+        to="/"
+        className="mx-auto mb-6 flex flex-col items-center gap-3 text-slate-900 dark:text-slate-100"
+      >
+        <img
+          src="/favicon-192.png"
+          alt="friendflow"
+          width={64}
+          height={64}
+          className="h-16 w-16 rounded-2xl shadow-sm ring-1 ring-black/5 dark:ring-white/10"
+        />
+        <span className="text-xl font-semibold tracking-tight">friendflow</span>
+      </Link>
       <div className="card p-6 sm:p-8">
         <h1 className="text-2xl font-semibold tracking-tight">{t("auth.login.title")}</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t("auth.login.subtitle")}</p>

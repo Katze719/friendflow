@@ -1,4 +1,4 @@
-import { LogOut, Shield, Users } from "lucide-react";
+import { LogOut, Shield } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
@@ -20,9 +20,13 @@ export default function Layout({ children }: { children: ReactNode }) {
             to="/"
             className="flex min-w-0 items-center gap-2 font-semibold text-slate-900 dark:text-slate-100"
           >
-            <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-white">
-              <Users className="h-4 w-4" />
-            </span>
+            <img
+              src="/favicon-192.png"
+              alt=""
+              width={32}
+              height={32}
+              className="h-8 w-8 shrink-0 rounded-lg"
+            />
             <span className="truncate">friendflow</span>
           </Link>
           <div className="flex items-center gap-1 sm:gap-3">
