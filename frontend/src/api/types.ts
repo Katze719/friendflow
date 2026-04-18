@@ -105,6 +105,18 @@ export interface TripLink {
   dislikes: number;
   /** 1 = like, -1 = dislike, 0 = no vote. */
   my_vote: 1 | -1 | 0;
+  /** Null means the link lives in the implicit "Unsorted" bucket. */
+  folder_id: string | null;
+  folder_name: string | null;
+}
+
+export interface TripFolder {
+  id: string;
+  name: string;
+  created_by: string;
+  created_by_display_name: string;
+  created_at: string;
+  link_count: number;
 }
 
 export interface CalendarEvent {

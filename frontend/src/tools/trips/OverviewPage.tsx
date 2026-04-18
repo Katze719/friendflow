@@ -1,7 +1,11 @@
 import {
   ArrowLeft,
+  ChevronDown,
   ExternalLink,
+  FolderOpen,
+  FolderPlus,
   Link2,
+  Pencil,
   Plus,
   RefreshCw,
   ThumbsDown,
@@ -13,24 +17,100 @@ import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import { ApiError } from "../../api/client";
 import { groupsApi } from "../../api/groups";
-import type { GroupDetail, TripLink } from "../../api/types";
+import type { GroupDetail, TripFolder, TripLink } from "../../api/types";
 import { formatDate } from "../../lib/format";
 import { tripsApi } from "./api";
+
+/**
+ * A "virtual" folder the UI renders: either a real TripFolder or the
+ * synthetic "Unsorted" bucket for links with folder_id === null.
+ */
+type Section = {
+  id: string | null;
+  name: string;
+  folder?: TripFolder;
+};
+
+const UNSORTED_KEY = "__unsorted__";
+const COLLAPSE_STORAGE_PREFIX = "friendflow.tripFolders.collapsed.";
+
+function sectionKey(id: string | null): string {
+  return id ?? UNSORTED_KEY;
+}
+
+function readCollapsed(groupId: string | undefined): Set<string> {
+  if (!groupId || typeof window === "undefined") return new Set();
+  try {
+    const raw = localStorage.getItem(COLLAPSE_STORAGE_PREFIX + groupId);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return new Set();
+    return new Set(parsed.filter((v): v is string => typeof v === "string"));
+  } catch {
+    return new Set();
+  }
+}
+
+function writeCollapsed(groupId: string | undefined, collapsed: Set<string>) {
+  if (!groupId) return;
+  try {
+    localStorage.setItem(
+      COLLAPSE_STORAGE_PREFIX + groupId,
+      JSON.stringify([...collapsed]),
+    );
+  } catch {
+    /* storage may be disabled; nothing we can do */
+  }
+}
 
 export default function TripsOverviewPage() {
   const { t } = useTranslation();
   const { groupId } = useParams<{ groupId: string }>();
   const [group, setGroup] = useState<GroupDetail | null>(null);
   const [links, setLinks] = useState<TripLink[] | null>(null);
+  const [folders, setFolders] = useState<TripFolder[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [showForm, setShowForm] = useState(false);
+  /**
+   * When set, the add-link composer is open and the folder dropdown is
+   * pre-filled with this value (null = "Unsorted"). `undefined` means closed.
+   */
+  const [composerFolderId, setComposerFolderId] = useState<
+    string | null | undefined
+  >(undefined);
+  const [showFolderForm, setShowFolderForm] = useState(false);
+  const [collapsed, setCollapsed] = useState<Set<string>>(() =>
+    readCollapsed(groupId),
+  );
+
+  useEffect(() => {
+    setCollapsed(readCollapsed(groupId));
+  }, [groupId]);
+
+  const toggleCollapsed = useCallback(
+    (id: string | null) => {
+      setCollapsed((prev) => {
+        const next = new Set(prev);
+        const key = sectionKey(id);
+        if (next.has(key)) next.delete(key);
+        else next.add(key);
+        writeCollapsed(groupId, next);
+        return next;
+      });
+    },
+    [groupId],
+  );
 
   const reload = useCallback(() => {
     if (!groupId) return;
-    Promise.all([groupsApi.get(groupId), tripsApi.list(groupId)])
-      .then(([g, l]) => {
+    Promise.all([
+      groupsApi.get(groupId),
+      tripsApi.list(groupId),
+      tripsApi.listFolders(groupId),
+    ])
+      .then(([g, l, f]) => {
         setGroup(g);
         setLinks(l);
+        setFolders(f);
       })
       .catch((e) => setError(e instanceof ApiError ? e.message : t("common.error")));
   }, [groupId, t]);
@@ -39,6 +119,23 @@ export default function TripsOverviewPage() {
     reload();
   }, [reload]);
 
+  const replaceLink = useCallback((updated: TripLink) => {
+    setLinks((prev) =>
+      prev ? prev.map((l) => (l.id === updated.id ? updated : l)) : prev,
+    );
+  }, []);
+
+  const sections: Section[] = useMemo(() => {
+    const list: Section[] = (folders ?? []).map((f) => ({
+      id: f.id,
+      name: f.name,
+      folder: f,
+    }));
+    // "Unsorted" always renders last so folders are visually grouped up top.
+    list.push({ id: null, name: t("trips.overview.unsorted") });
+    return list;
+  }, [folders, t]);
+
   if (error && !group) {
     return (
       <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
@@ -46,7 +143,7 @@ export default function TripsOverviewPage() {
       </p>
     );
   }
-  if (!group || !links) {
+  if (!group || !links || !folders) {
     return <p className="text-slate-500 dark:text-slate-400">{t("common.loading")}</p>;
   }
 
@@ -68,27 +165,54 @@ export default function TripsOverviewPage() {
               {group.name} - {t("trips.overview.subtitle")}
             </p>
           </div>
-          <button
-            className="btn-primary w-full sm:w-auto"
-            onClick={() => setShowForm((v) => !v)}
-            aria-expanded={showForm}
-          >
-            <Plus className="h-4 w-4" /> {t("trips.overview.add")}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              className="btn-secondary"
+              onClick={() => {
+                setShowFolderForm((v) => !v);
+                setComposerFolderId(undefined);
+              }}
+              aria-expanded={showFolderForm}
+            >
+              <FolderPlus className="h-4 w-4" /> {t("trips.overview.newFolder")}
+            </button>
+            <button
+              className="btn-primary"
+              onClick={() => {
+                setComposerFolderId((v) => (v === undefined ? null : undefined));
+                setShowFolderForm(false);
+              }}
+              aria-expanded={composerFolderId !== undefined}
+            >
+              <Plus className="h-4 w-4" /> {t("trips.overview.add")}
+            </button>
+          </div>
         </div>
       </div>
 
-      {showForm && (
-        <AddLinkForm
+      {showFolderForm && (
+        <AddFolderForm
           groupId={group.id}
           onDone={(created) => {
-            setShowForm(false);
+            setShowFolderForm(false);
             if (created) reload();
           }}
         />
       )}
 
-      {links.length === 0 ? (
+      {composerFolderId !== undefined && (
+        <AddLinkForm
+          groupId={group.id}
+          folders={folders}
+          initialFolderId={composerFolderId}
+          onDone={(created) => {
+            setComposerFolderId(undefined);
+            if (created) reload();
+          }}
+        />
+      )}
+
+      {links.length === 0 && folders.length === 0 ? (
         <div className="card p-8 text-center">
           <Link2 className="mx-auto h-8 w-8 text-slate-400 dark:text-slate-500" />
           <h2 className="mt-3 text-lg font-semibold">
@@ -99,41 +223,242 @@ export default function TripsOverviewPage() {
           </p>
         </div>
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2">
-          {links.map((link) => (
-            <LinkCard
-              key={link.id}
-              link={link}
-              groupId={group.id}
-              onChanged={reload}
-              onReplace={(updated) =>
-                setLinks((prev) =>
-                  prev
-                    ? prev.map((l) => (l.id === updated.id ? updated : l))
-                    : prev,
-                )
-              }
-            />
-          ))}
-        </ul>
+        <div className="space-y-8">
+          {sections.map((section) => {
+            const inFolder = links.filter((l) => l.folder_id === section.id);
+            // Hide the synthetic "Unsorted" section when it's empty and the
+            // user already has other folders - otherwise it adds noise.
+            if (
+              section.id === null &&
+              inFolder.length === 0 &&
+              folders.length > 0
+            ) {
+              return null;
+            }
+            const key = sectionKey(section.id);
+            return (
+              <FolderSection
+                key={key}
+                section={section}
+                links={inFolder}
+                groupId={group.id}
+                folders={folders}
+                collapsed={collapsed.has(key)}
+                onToggleCollapsed={() => toggleCollapsed(section.id)}
+                onAddLinkHere={() => {
+                  setComposerFolderId(section.id);
+                  setShowFolderForm(false);
+                }}
+                onChanged={reload}
+                onReplace={replaceLink}
+              />
+            );
+          })}
+        </div>
       )}
     </div>
+  );
+}
+
+function FolderSection({
+  section,
+  links,
+  groupId,
+  folders,
+  collapsed,
+  onToggleCollapsed,
+  onAddLinkHere,
+  onChanged,
+  onReplace,
+}: {
+  section: Section;
+  links: TripLink[];
+  groupId: string;
+  folders: TripFolder[];
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
+  onAddLinkHere: () => void;
+  onChanged: () => void;
+  onReplace: (updated: TripLink) => void;
+}) {
+  const { t } = useTranslation();
+  const [renaming, setRenaming] = useState(false);
+  const [name, setName] = useState(section.name);
+
+  const isUnsorted = section.id === null;
+
+  useEffect(() => {
+    setName(section.name);
+  }, [section.name]);
+
+  async function onDeleteFolder() {
+    if (!section.folder) return;
+    if (
+      !confirm(
+        t("trips.overview.folder.deleteConfirm", { name: section.folder.name }),
+      )
+    ) {
+      return;
+    }
+    try {
+      await tripsApi.deleteFolder(groupId, section.folder.id);
+      onChanged();
+    } catch (e) {
+      alert(e instanceof ApiError ? e.message : t("common.error"));
+    }
+  }
+
+  async function saveRename(e: FormEvent) {
+    e.preventDefault();
+    if (!section.folder) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    try {
+      await tripsApi.updateFolder(groupId, section.folder.id, trimmed);
+      setRenaming(false);
+      onChanged();
+    } catch (err) {
+      alert(err instanceof ApiError ? err.message : t("common.error"));
+    }
+  }
+
+  return (
+    <section>
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        {renaming && section.folder ? (
+          <form onSubmit={saveRename} className="flex flex-wrap items-center gap-2">
+            <FolderOpen className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+            <input
+              autoFocus
+              className="input h-8 w-60 max-w-full py-1 text-sm"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={80}
+              required
+            />
+            <button type="submit" className="btn-primary h-8 py-1 text-sm">
+              {t("common.save")}
+            </button>
+            <button
+              type="button"
+              className="btn-ghost h-8 py-1 text-sm"
+              onClick={() => {
+                setName(section.name);
+                setRenaming(false);
+              }}
+            >
+              {t("common.cancel")}
+            </button>
+          </form>
+        ) : (
+          <>
+            <h2 className="text-lg font-semibold">
+              <button
+                type="button"
+                onClick={onToggleCollapsed}
+                aria-expanded={!collapsed}
+                className="inline-flex items-center gap-2 rounded-md text-left hover:text-brand-600 dark:hover:text-brand-400"
+                title={
+                  collapsed
+                    ? t("trips.overview.folder.expand")
+                    : t("trips.overview.folder.collapse")
+                }
+              >
+                <ChevronDown
+                  className={`h-4 w-4 text-slate-400 transition-transform dark:text-slate-500 ${
+                    collapsed ? "-rotate-90" : ""
+                  }`}
+                />
+                <FolderOpen
+                  className={`h-4 w-4 ${
+                    isUnsorted
+                      ? "text-slate-400 dark:text-slate-500"
+                      : "text-brand-500 dark:text-brand-400"
+                  }`}
+                />
+                {section.name}
+              </button>
+            </h2>
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+              {links.length}
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                className="btn-ghost -my-1 h-7 px-2 text-slate-500 hover:text-brand-600 dark:text-slate-400 dark:hover:text-brand-400"
+                onClick={onAddLinkHere}
+                aria-label={t("trips.overview.folder.addLinkAria", {
+                  name: section.name,
+                })}
+                title={t("trips.overview.folder.addLink")}
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+              {section.folder && (
+                <>
+                  <button
+                    type="button"
+                    className="btn-ghost -my-1 h-7 px-2 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                    onClick={() => setRenaming(true)}
+                    aria-label={t("trips.overview.folder.renameAria")}
+                    title={t("trips.overview.folder.rename")}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-ghost -my-1 h-7 px-2 text-slate-400 hover:text-rose-600 dark:text-slate-500 dark:hover:text-rose-400"
+                    onClick={onDeleteFolder}
+                    aria-label={t("trips.overview.folder.deleteAria")}
+                    title={t("trips.overview.folder.delete")}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+
+      {!collapsed &&
+        (links.length === 0 ? (
+          <p className="card p-6 text-center text-sm text-slate-500 dark:text-slate-400">
+            {t("trips.overview.folder.empty")}
+          </p>
+        ) : (
+          <ul className="grid gap-3 sm:grid-cols-2">
+            {links.map((link) => (
+              <LinkCard
+                key={link.id}
+                link={link}
+                groupId={groupId}
+                folders={folders}
+                onChanged={onChanged}
+                onReplace={onReplace}
+              />
+            ))}
+          </ul>
+        ))}
+    </section>
   );
 }
 
 function LinkCard({
   link,
   groupId,
+  folders,
   onChanged,
   onReplace,
 }: {
   link: TripLink;
   groupId: string;
+  folders: TripFolder[];
   onChanged: () => void;
   onReplace: (updated: TripLink) => void;
 }) {
   const { t } = useTranslation();
-  const [busy, setBusy] = useState<null | "delete" | "refresh">(null);
+  const [busy, setBusy] = useState<null | "delete" | "refresh" | "move">(null);
   const [editing, setEditing] = useState(false);
   const [note, setNote] = useState(link.note);
   const [votingBusy, setVotingBusy] = useState(false);
@@ -161,7 +486,6 @@ function LinkCard({
       const updated = await tripsApi.vote(groupId, link.id, nextValue);
       onReplace(updated);
     } catch (e) {
-      // Rollback on failure.
       onReplace(link);
       alert(e instanceof ApiError ? e.message : t("common.error"));
     } finally {
@@ -204,6 +528,19 @@ function LinkCard({
     try {
       await tripsApi.refresh(groupId, link.id);
       onChanged();
+    } catch (e) {
+      alert(e instanceof ApiError ? e.message : t("common.error"));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function onMove(folderId: string | null) {
+    if (folderId === link.folder_id) return;
+    setBusy("move");
+    try {
+      const updated = await tripsApi.moveLink(groupId, link.id, folderId);
+      onReplace(updated);
     } catch (e) {
       alert(e instanceof ApiError ? e.message : t("common.error"));
     } finally {
@@ -339,14 +676,35 @@ function LinkCard({
           </button>
         )}
 
-        <div className="mt-3 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-          <span>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
+          <span className="min-w-0 truncate">
             {t("trips.overview.addedBy", {
               name: link.added_by_display_name,
               date: formatDate(link.created_at),
             })}
           </span>
           <div className="flex items-center gap-1">
+            <label
+              className="sr-only"
+              htmlFor={`folder-select-${link.id}`}
+            >
+              {t("trips.overview.folder.moveAria")}
+            </label>
+            <select
+              id={`folder-select-${link.id}`}
+              className="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-xs focus:border-brand-400 focus:outline-none focus:ring-1 focus:ring-brand-400 dark:border-slate-700 dark:bg-slate-900"
+              value={link.folder_id ?? ""}
+              disabled={busy === "move"}
+              onChange={(e) => onMove(e.target.value === "" ? null : e.target.value)}
+              title={t("trips.overview.folder.moveAria")}
+            >
+              <option value="">{t("trips.overview.unsorted")}</option>
+              {folders.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
+            </select>
             <button
               type="button"
               className="btn-ghost -my-1"
@@ -418,14 +776,19 @@ function VoteButton({
 
 function AddLinkForm({
   groupId,
+  folders,
+  initialFolderId,
   onDone,
 }: {
   groupId: string;
+  folders: TripFolder[];
+  initialFolderId: string | null;
   onDone: (created: boolean) => void;
 }) {
   const { t } = useTranslation();
   const [url, setUrl] = useState("");
   const [note, setNote] = useState("");
+  const [folderId, setFolderId] = useState<string>(initialFolderId ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -434,7 +797,11 @@ function AddLinkForm({
     setError(null);
     setLoading(true);
     try {
-      await tripsApi.create(groupId, { url: url.trim(), note: note.trim() });
+      await tripsApi.create(groupId, {
+        url: url.trim(),
+        note: note.trim(),
+        folder_id: folderId === "" ? null : folderId,
+      });
       onDone(true);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("common.error"));
@@ -460,18 +827,38 @@ function AddLinkForm({
           onChange={(e) => setUrl(e.target.value)}
         />
       </div>
-      <div className="space-y-1">
-        <label className="label" htmlFor="trip_note">
-          {t("trips.overview.noteOptional")}
-        </label>
-        <textarea
-          id="trip_note"
-          className="input min-h-[72px]"
-          placeholder={t("trips.overview.notePlaceholder")}
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          maxLength={2000}
-        />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1">
+          <label className="label" htmlFor="trip_folder">
+            {t("trips.overview.folder.label")}
+          </label>
+          <select
+            id="trip_folder"
+            className="input"
+            value={folderId}
+            onChange={(e) => setFolderId(e.target.value)}
+          >
+            <option value="">{t("trips.overview.unsorted")}</option>
+            {folders.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1 sm:col-span-2">
+          <label className="label" htmlFor="trip_note">
+            {t("trips.overview.noteOptional")}
+          </label>
+          <textarea
+            id="trip_note"
+            className="input min-h-[72px]"
+            placeholder={t("trips.overview.notePlaceholder")}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            maxLength={2000}
+          />
+        </div>
       </div>
       {error && (
         <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
@@ -484,6 +871,69 @@ function AddLinkForm({
         </button>
         <button type="submit" className="btn-primary" disabled={loading}>
           {loading ? t("common.saving") : t("trips.overview.add")}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function AddFolderForm({
+  groupId,
+  onDone,
+}: {
+  groupId: string;
+  onDone: (created: boolean) => void;
+}) {
+  const { t } = useTranslation();
+  const [name, setName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setError(null);
+    setLoading(true);
+    try {
+      await tripsApi.createFolder(groupId, trimmed);
+      onDone(true);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t("common.error"));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="card space-y-3 p-5">
+      <h3 className="font-semibold">{t("trips.overview.folder.addTitle")}</h3>
+      <div className="space-y-1">
+        <label className="label" htmlFor="trip_folder_name">
+          {t("trips.overview.folder.name")}
+        </label>
+        <input
+          id="trip_folder_name"
+          required
+          maxLength={80}
+          className="input"
+          placeholder={t("trips.overview.folder.namePlaceholder")}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          autoFocus
+        />
+      </div>
+      {error && (
+        <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">
+          {error}
+        </p>
+      )}
+      <div className="flex justify-end gap-2">
+        <button type="button" className="btn-ghost" onClick={() => onDone(false)}>
+          {t("common.cancel")}
+        </button>
+        <button type="submit" className="btn-primary" disabled={loading}>
+          {loading ? t("common.saving") : t("trips.overview.folder.create")}
         </button>
       </div>
     </form>

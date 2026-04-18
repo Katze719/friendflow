@@ -2,7 +2,7 @@ pub mod handlers;
 mod unfurl;
 
 use axum::{
-    routing::{get, post},
+    routing::{get, post, put},
     Router,
 };
 
@@ -21,8 +21,15 @@ pub fn routes() -> Router<AppState> {
                 .delete(handlers::delete_link),
         )
         .route("/links/:link_id/refresh", post(handlers::refresh_link))
+        .route("/links/:link_id/vote", put(handlers::vote_link))
+        .route("/links/:link_id/folder", put(handlers::move_link))
         .route(
-            "/links/:link_id/vote",
-            axum::routing::put(handlers::vote_link),
+            "/folders",
+            get(handlers::list_folders).post(handlers::create_folder),
+        )
+        .route(
+            "/folders/:folder_id",
+            axum::routing::patch(handlers::update_folder)
+                .delete(handlers::delete_folder),
         )
 }
