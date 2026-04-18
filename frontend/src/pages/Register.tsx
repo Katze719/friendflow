@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ApiError } from "../api/client";
+import InstallAppButton from "../components/InstallAppButton";
 import { useAuth } from "../context/AuthContext";
 
 export default function Register() {
@@ -113,6 +114,9 @@ export default function Register() {
             {t("auth.register.login")}
           </Link>
         </p>
+      </div>
+      <div className="mt-4 flex justify-center">
+        <InstallAppButton variant="ghost" />
       </div>
     </div>
   );

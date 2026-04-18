@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import HeaderMenu from "./HeaderMenu";
+import InstallAppButton from "./InstallAppButton";
 import LanguageSwitcher from "./LanguageSwitcher";
 import ThemeSwitcher from "./ThemeSwitcher";
 
@@ -30,6 +31,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             <span className="truncate">friendflow</span>
           </Link>
           <div className="flex items-center gap-1 sm:gap-3">
+            <InstallAppButton variant="ghost" />
             <div className="hidden items-center gap-3 sm:flex">
               <ThemeSwitcher />
               <LanguageSwitcher />

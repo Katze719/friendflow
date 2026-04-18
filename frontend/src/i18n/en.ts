@@ -10,6 +10,17 @@ const en = {
     copy: "Copy",
     copied: "Copied",
     language: "Language",
+    close: "Close",
+  },
+  install: {
+    cta: "Install app",
+    ios: {
+      title: "Install friendflow",
+      subtitle: "Add to your home screen",
+      step1: "Tap the Share button in Safari",
+      step2: "Scroll down and tap \u201CAdd to Home Screen\u201D",
+      step3: "Tap \u201CAdd\u201D to finish",
+    },
   },
   theme: {
     aria: "Color theme",

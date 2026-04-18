@@ -12,6 +12,17 @@ const de: Translations = {
     copy: "Kopieren",
     copied: "Kopiert",
     language: "Sprache",
+    close: "Schließen",
+  },
+  install: {
+    cta: "App installieren",
+    ios: {
+      title: "friendflow installieren",
+      subtitle: "Zum Home-Bildschirm hinzufügen",
+      step1: "Tippe in Safari auf den Teilen-Button",
+      step2: "Scrolle runter und tippe auf \u201EZum Home-Bildschirm\u201C",
+      step3: "Tippe auf \u201EHinzufügen\u201C, um fertig zu werden",
+    },
   },
   theme: {
     aria: "Farbschema",
