@@ -27,13 +27,12 @@ pub async fn ensure_member(
     group_id: Uuid,
     user_id: Uuid,
 ) -> Result<(), AppError> {
-    let row: Option<(i64,)> = sqlx::query_as(
-        "SELECT 1::BIGINT FROM group_members WHERE group_id = $1 AND user_id = $2",
-    )
-    .bind(group_id)
-    .bind(user_id)
-    .fetch_optional(&state.db)
-    .await?;
+    let row: Option<(i64,)> =
+        sqlx::query_as("SELECT 1::BIGINT FROM group_members WHERE group_id = $1 AND user_id = $2")
+            .bind(group_id)
+            .bind(user_id)
+            .fetch_optional(&state.db)
+            .await?;
     if row.is_none() {
         return Err(AppError::Forbidden);
     }

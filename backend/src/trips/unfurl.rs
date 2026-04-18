@@ -20,8 +20,7 @@ use url::Url;
 
 const TIMEOUT: Duration = Duration::from_secs(8);
 const MAX_BYTES: usize = 2 * 1024 * 1024; // 2 MiB of HTML is plenty
-const USER_AGENT: &str =
-    "friendflow-unfurl/0.1 (+https://github.com/Katze719/friendflow)";
+const USER_AGENT: &str = "friendflow-unfurl/0.1 (+https://github.com/Katze719/friendflow)";
 
 #[derive(Debug, Default, Clone)]
 pub struct Preview {

@@ -175,13 +175,11 @@ pub async fn delete_event(
     crate::groups::ensure_member(&state, group_id, user.id).await?;
 
     // Any group member can delete events inside their group.
-    let result = sqlx::query(
-        "DELETE FROM calendar_events WHERE id = $1 AND group_id = $2",
-    )
-    .bind(event_id)
-    .bind(group_id)
-    .execute(&state.db)
-    .await?;
+    let result = sqlx::query("DELETE FROM calendar_events WHERE id = $1 AND group_id = $2")
+        .bind(event_id)
+        .bind(group_id)
+        .execute(&state.db)
+        .await?;
 
     if result.rows_affected() == 0 {
         return Err(AppError::NotFound("event not found".into()));

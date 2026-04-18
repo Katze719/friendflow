@@ -1,3 +1,9 @@
+// sqlx's `query_as::<_, (Col1, Col2, ...)>()` pattern produces big tuple
+// types that are only used at the call-site to destructure into local
+// variables. Extracting a type alias per query adds noise without aiding
+// readability, so we opt out of this lint crate-wide.
+#![allow(clippy::type_complexity)]
+
 use std::net::SocketAddr;
 
 use axum::{http::HeaderValue, routing::get, Router};

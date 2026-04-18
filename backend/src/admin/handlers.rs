@@ -47,12 +47,19 @@ pub async fn list_users(
         ),
     };
 
-    let rows: Vec<(Uuid, String, String, String, bool, Option<DateTime<Utc>>, DateTime<Utc>)> =
-        if let Some(s) = bind_status {
-            sqlx::query_as(sql).bind(s).fetch_all(&state.db).await?
-        } else {
-            sqlx::query_as(sql).fetch_all(&state.db).await?
-        };
+    let rows: Vec<(
+        Uuid,
+        String,
+        String,
+        String,
+        bool,
+        Option<DateTime<Utc>>,
+        DateTime<Utc>,
+    )> = if let Some(s) = bind_status {
+        sqlx::query_as(sql).bind(s).fetch_all(&state.db).await?
+    } else {
+        sqlx::query_as(sql).fetch_all(&state.db).await?
+    };
 
     let out = rows
         .into_iter()
@@ -77,16 +84,23 @@ pub async fn approve_user(
     _admin: AdminUser,
     Path(id): Path<Uuid>,
 ) -> AppResult<Json<AdminUserRow>> {
-    let row: Option<(Uuid, String, String, String, bool, Option<DateTime<Utc>>, DateTime<Utc>)> =
-        sqlx::query_as(
-            "UPDATE users
+    let row: Option<(
+        Uuid,
+        String,
+        String,
+        String,
+        bool,
+        Option<DateTime<Utc>>,
+        DateTime<Utc>,
+    )> = sqlx::query_as(
+        "UPDATE users
              SET status = 'approved', approved_at = COALESCE(approved_at, NOW())
              WHERE id = $1
              RETURNING id, email, display_name, status, is_admin, approved_at, created_at",
-        )
-        .bind(id)
-        .fetch_optional(&state.db)
-        .await?;
+    )
+    .bind(id)
+    .fetch_optional(&state.db)
+    .await?;
 
     let Some((id, email, display_name, status, is_admin, approved_at, created_at)) = row else {
         return Err(AppError::NotFound("user not found".into()));
@@ -107,18 +121,25 @@ pub async fn promote_user(
     _admin: AdminUser,
     Path(id): Path<Uuid>,
 ) -> AppResult<Json<AdminUserRow>> {
-    let row: Option<(Uuid, String, String, String, bool, Option<DateTime<Utc>>, DateTime<Utc>)> =
-        sqlx::query_as(
-            "UPDATE users
+    let row: Option<(
+        Uuid,
+        String,
+        String,
+        String,
+        bool,
+        Option<DateTime<Utc>>,
+        DateTime<Utc>,
+    )> = sqlx::query_as(
+        "UPDATE users
              SET is_admin = TRUE,
                  status = 'approved',
                  approved_at = COALESCE(approved_at, NOW())
              WHERE id = $1
              RETURNING id, email, display_name, status, is_admin, approved_at, created_at",
-        )
-        .bind(id)
-        .fetch_optional(&state.db)
-        .await?;
+    )
+    .bind(id)
+    .fetch_optional(&state.db)
+    .await?;
 
     let Some((id, email, display_name, status, is_admin, approved_at, created_at)) = row else {
         return Err(AppError::NotFound("user not found".into()));
@@ -146,10 +167,11 @@ pub async fn demote_user(
             .fetch_one(&state.db)
             .await?;
 
-    let target_is_admin: Option<(bool,)> = sqlx::query_as("SELECT is_admin FROM users WHERE id = $1")
-        .bind(id)
-        .fetch_optional(&state.db)
-        .await?;
+    let target_is_admin: Option<(bool,)> =
+        sqlx::query_as("SELECT is_admin FROM users WHERE id = $1")
+            .bind(id)
+            .fetch_optional(&state.db)
+            .await?;
     let Some((target_is_admin,)) = target_is_admin else {
         return Err(AppError::NotFound("user not found".into()));
     };
@@ -159,18 +181,27 @@ pub async fn demote_user(
         ));
     }
     if id == admin.0.id && admin_count.0 <= 1 {
-        return Err(AppError::BadRequest("cannot demote yourself as last admin".into()));
+        return Err(AppError::BadRequest(
+            "cannot demote yourself as last admin".into(),
+        ));
     }
 
-    let row: Option<(Uuid, String, String, String, bool, Option<DateTime<Utc>>, DateTime<Utc>)> =
-        sqlx::query_as(
-            "UPDATE users SET is_admin = FALSE
+    let row: Option<(
+        Uuid,
+        String,
+        String,
+        String,
+        bool,
+        Option<DateTime<Utc>>,
+        DateTime<Utc>,
+    )> = sqlx::query_as(
+        "UPDATE users SET is_admin = FALSE
              WHERE id = $1
              RETURNING id, email, display_name, status, is_admin, approved_at, created_at",
-        )
-        .bind(id)
-        .fetch_optional(&state.db)
-        .await?;
+    )
+    .bind(id)
+    .fetch_optional(&state.db)
+    .await?;
 
     let Some((id, email, display_name, status, is_admin, approved_at, created_at)) = row else {
         return Err(AppError::NotFound("user not found".into()));

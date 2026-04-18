@@ -43,9 +43,11 @@ impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, code, message): (StatusCode, &'static str, String) = match &self {
             AppError::BadRequest(m) => (StatusCode::BAD_REQUEST, "bad_request", m.clone()),
-            AppError::Unauthorized => {
-                (StatusCode::UNAUTHORIZED, "unauthorized", "unauthorized".into())
-            }
+            AppError::Unauthorized => (
+                StatusCode::UNAUTHORIZED,
+                "unauthorized",
+                "unauthorized".into(),
+            ),
             AppError::Forbidden => (StatusCode::FORBIDDEN, "forbidden", "forbidden".into()),
             AppError::NotFound(m) => (StatusCode::NOT_FOUND, "not_found", m.clone()),
             AppError::Conflict(m) => (StatusCode::CONFLICT, "conflict", m.clone()),
@@ -57,12 +59,24 @@ impl IntoResponse for AppError {
             AppError::Validation(e) => (StatusCode::BAD_REQUEST, "validation", e.to_string()),
             AppError::Sqlx(e) => {
                 tracing::error!(error = ?e, "sqlx error");
-                (StatusCode::INTERNAL_SERVER_ERROR, "database", "database error".into())
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "database",
+                    "database error".into(),
+                )
             }
-            AppError::Jwt(_) => (StatusCode::UNAUTHORIZED, "invalid_token", "invalid token".into()),
+            AppError::Jwt(_) => (
+                StatusCode::UNAUTHORIZED,
+                "invalid_token",
+                "invalid token".into(),
+            ),
             AppError::Internal(e) => {
                 tracing::error!(error = ?e, "internal error");
-                (StatusCode::INTERNAL_SERVER_ERROR, "internal", "internal error".into())
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "internal",
+                    "internal error".into(),
+                )
             }
         };
 

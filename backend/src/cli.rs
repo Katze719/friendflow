@@ -5,7 +5,11 @@ use sqlx::PgPool;
 use crate::config::Config;
 
 #[derive(Debug, Parser)]
-#[command(name = "friendflow-backend", version, about = "friendflow backend server & admin CLI")]
+#[command(
+    name = "friendflow-backend",
+    version,
+    about = "friendflow backend server & admin CLI"
+)]
 pub struct Cli {
     #[command(subcommand)]
     pub command: Option<Command>,
@@ -66,8 +70,8 @@ async fn list_users(pool: &PgPool) -> Result<()> {
     }
 
     println!(
-        "{:<40} {:<24} {:<10} {}",
-        "EMAIL", "DISPLAY NAME", "STATUS", "ADMIN"
+        "{:<40} {:<24} {:<10} ADMIN",
+        "EMAIL", "DISPLAY NAME", "STATUS"
     );
     for (email, display_name, status, is_admin) in rows {
         println!(

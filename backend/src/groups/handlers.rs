@@ -151,13 +151,12 @@ pub async fn join(
             .fetch_one(&state.db)
             .await?;
 
-    let my_role: (String,) = sqlx::query_as(
-        "SELECT role FROM group_members WHERE group_id = $1 AND user_id = $2",
-    )
-    .bind(id)
-    .bind(user.id)
-    .fetch_one(&state.db)
-    .await?;
+    let my_role: (String,) =
+        sqlx::query_as("SELECT role FROM group_members WHERE group_id = $1 AND user_id = $2")
+            .bind(id)
+            .bind(user.id)
+            .fetch_one(&state.db)
+            .await?;
 
     Ok(Json(GroupSummary {
         id,
@@ -245,15 +244,13 @@ pub async fn detail(
 
     let members = member_rows
         .into_iter()
-        .map(
-            |(id, display_name, email, role, joined_at)| Member {
-                id,
-                display_name,
-                email,
-                role,
-                joined_at,
-            },
-        )
+        .map(|(id, display_name, email, role, joined_at)| Member {
+            id,
+            display_name,
+            email,
+            role,
+            joined_at,
+        })
         .collect();
 
     Ok(Json(GroupDetail {
@@ -279,15 +276,16 @@ pub async fn leave(
 ) -> AppResult<Json<serde_json::Value>> {
     let mut tx = state.db.begin().await?;
 
-    let row: Option<(String,)> = sqlx::query_as(
-        "SELECT role FROM group_members WHERE group_id = $1 AND user_id = $2",
-    )
-    .bind(id)
-    .bind(user.id)
-    .fetch_optional(&mut *tx)
-    .await?;
+    let row: Option<(String,)> =
+        sqlx::query_as("SELECT role FROM group_members WHERE group_id = $1 AND user_id = $2")
+            .bind(id)
+            .bind(user.id)
+            .fetch_optional(&mut *tx)
+            .await?;
     let Some((role,)) = row else {
-        return Err(AppError::NotFound("you are not a member of this group".into()));
+        return Err(AppError::NotFound(
+            "you are not a member of this group".into(),
+        ));
     };
 
     sqlx::query("DELETE FROM group_members WHERE group_id = $1 AND user_id = $2")
@@ -296,12 +294,11 @@ pub async fn leave(
         .execute(&mut *tx)
         .await?;
 
-    let remaining: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*)::BIGINT FROM group_members WHERE group_id = $1",
-    )
-    .bind(id)
-    .fetch_one(&mut *tx)
-    .await?;
+    let remaining: (i64,) =
+        sqlx::query_as("SELECT COUNT(*)::BIGINT FROM group_members WHERE group_id = $1")
+            .bind(id)
+            .fetch_one(&mut *tx)
+            .await?;
 
     if remaining.0 == 0 {
         sqlx::query("DELETE FROM groups WHERE id = $1")
@@ -309,7 +306,9 @@ pub async fn leave(
             .execute(&mut *tx)
             .await?;
         tx.commit().await?;
-        return Ok(Json(serde_json::json!({ "ok": true, "group_deleted": true })));
+        return Ok(Json(
+            serde_json::json!({ "ok": true, "group_deleted": true }),
+        ));
     }
 
     if role == "owner" {
@@ -337,7 +336,9 @@ pub async fn leave(
     }
 
     tx.commit().await?;
-    Ok(Json(serde_json::json!({ "ok": true, "group_deleted": false })))
+    Ok(Json(
+        serde_json::json!({ "ok": true, "group_deleted": false }),
+    ))
 }
 
 pub async fn delete_group(
@@ -345,11 +346,10 @@ pub async fn delete_group(
     user: AuthUser,
     Path(id): Path<Uuid>,
 ) -> AppResult<Json<serde_json::Value>> {
-    let row: Option<(Uuid,)> =
-        sqlx::query_as("SELECT created_by FROM groups WHERE id = $1")
-            .bind(id)
-            .fetch_optional(&state.db)
-            .await?;
+    let row: Option<(Uuid,)> = sqlx::query_as("SELECT created_by FROM groups WHERE id = $1")
+        .bind(id)
+        .fetch_optional(&state.db)
+        .await?;
     let Some((created_by,)) = row else {
         return Err(AppError::NotFound("group not found".into()));
     };

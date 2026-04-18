@@ -17,8 +17,7 @@ pub fn routes() -> Router<AppState> {
         )
         .route(
             "/links/:link_id",
-            axum::routing::patch(handlers::update_link)
-                .delete(handlers::delete_link),
+            axum::routing::patch(handlers::update_link).delete(handlers::delete_link),
         )
         .route("/links/:link_id/refresh", post(handlers::refresh_link))
         .route("/links/:link_id/vote", put(handlers::vote_link))
@@ -29,7 +28,6 @@ pub fn routes() -> Router<AppState> {
         )
         .route(
             "/folders/:folder_id",
-            axum::routing::patch(handlers::update_folder)
-                .delete(handlers::delete_folder),
+            axum::routing::patch(handlers::update_folder).delete(handlers::delete_folder),
         )
 }

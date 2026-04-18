@@ -160,13 +160,12 @@ pub async fn update_link(
 
     // Any group member may edit a link; we still need to make sure the link
     // exists within this group.
-    let exists: Option<(Uuid,)> = sqlx::query_as(
-        "SELECT id FROM trip_links WHERE id = $1 AND group_id = $2",
-    )
-    .bind(link_id)
-    .bind(group_id)
-    .fetch_optional(&state.db)
-    .await?;
+    let exists: Option<(Uuid,)> =
+        sqlx::query_as("SELECT id FROM trip_links WHERE id = $1 AND group_id = $2")
+            .bind(link_id)
+            .bind(group_id)
+            .fetch_optional(&state.db)
+            .await?;
     if exists.is_none() {
         return Err(AppError::NotFound("link not found".into()));
     }
@@ -192,13 +191,11 @@ pub async fn delete_link(
 
     // Any group member can delete links inside their group. The group-id
     // filter guarantees we don't touch other groups' data.
-    let result = sqlx::query(
-        "DELETE FROM trip_links WHERE id = $1 AND group_id = $2",
-    )
-    .bind(link_id)
-    .bind(group_id)
-    .execute(&state.db)
-    .await?;
+    let result = sqlx::query("DELETE FROM trip_links WHERE id = $1 AND group_id = $2")
+        .bind(link_id)
+        .bind(group_id)
+        .execute(&state.db)
+        .await?;
 
     if result.rows_affected() == 0 {
         return Err(AppError::NotFound("link not found".into()));
@@ -214,13 +211,12 @@ pub async fn refresh_link(
 ) -> AppResult<Json<TripLink>> {
     crate::groups::ensure_member(&state, group_id, user.id).await?;
 
-    let row: Option<(String,)> = sqlx::query_as(
-        "SELECT url FROM trip_links WHERE id = $1 AND group_id = $2",
-    )
-    .bind(link_id)
-    .bind(group_id)
-    .fetch_optional(&state.db)
-    .await?;
+    let row: Option<(String,)> =
+        sqlx::query_as("SELECT url FROM trip_links WHERE id = $1 AND group_id = $2")
+            .bind(link_id)
+            .bind(group_id)
+            .fetch_optional(&state.db)
+            .await?;
     let Some((url,)) = row else {
         return Err(AppError::NotFound("link not found".into()));
     };
@@ -258,13 +254,12 @@ pub async fn vote_link(
     payload.validate()?;
     crate::groups::ensure_member(&state, group_id, user.id).await?;
 
-    let exists: Option<(i64,)> = sqlx::query_as(
-        "SELECT 1::BIGINT FROM trip_links WHERE id = $1 AND group_id = $2",
-    )
-    .bind(link_id)
-    .bind(group_id)
-    .fetch_optional(&state.db)
-    .await?;
+    let exists: Option<(i64,)> =
+        sqlx::query_as("SELECT 1::BIGINT FROM trip_links WHERE id = $1 AND group_id = $2")
+            .bind(link_id)
+            .bind(group_id)
+            .fetch_optional(&state.db)
+            .await?;
     if exists.is_none() {
         return Err(AppError::NotFound("link not found".into()));
     }
@@ -318,16 +313,16 @@ pub async fn list_folders(
 
     let out = rows
         .into_iter()
-        .map(|(id, name, created_by, created_by_display_name, created_at, link_count)| {
-            TripFolder {
+        .map(
+            |(id, name, created_by, created_by_display_name, created_at, link_count)| TripFolder {
                 id,
                 name,
                 created_by,
                 created_by_display_name,
                 created_at,
                 link_count,
-            }
-        })
+            },
+        )
         .collect();
     Ok(Json(out))
 }

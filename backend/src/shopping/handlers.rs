@@ -135,13 +135,12 @@ pub async fn toggle_item(
 ) -> AppResult<Json<ShoppingItem>> {
     crate::groups::ensure_member(&state, group_id, user.id).await?;
 
-    let current: Option<(bool,)> = sqlx::query_as(
-        "SELECT is_done FROM shopping_items WHERE id = $1 AND group_id = $2",
-    )
-    .bind(item_id)
-    .bind(group_id)
-    .fetch_optional(&state.db)
-    .await?;
+    let current: Option<(bool,)> =
+        sqlx::query_as("SELECT is_done FROM shopping_items WHERE id = $1 AND group_id = $2")
+            .bind(item_id)
+            .bind(group_id)
+            .fetch_optional(&state.db)
+            .await?;
     let Some((was_done,)) = current else {
         return Err(AppError::NotFound("item not found".into()));
     };
@@ -196,25 +195,24 @@ pub async fn clear_done(
     Path(group_id): Path<Uuid>,
 ) -> AppResult<Json<serde_json::Value>> {
     crate::groups::ensure_member(&state, group_id, user.id).await?;
-    let res = sqlx::query(
-        "DELETE FROM shopping_items WHERE group_id = $1 AND is_done = TRUE",
-    )
-    .bind(group_id)
-    .execute(&state.db)
-    .await?;
-    Ok(Json(serde_json::json!({ "ok": true, "removed": res.rows_affected() })))
+    let res = sqlx::query("DELETE FROM shopping_items WHERE group_id = $1 AND is_done = TRUE")
+        .bind(group_id)
+        .execute(&state.db)
+        .await?;
+    Ok(Json(
+        serde_json::json!({ "ok": true, "removed": res.rows_affected() }),
+    ))
 }
 
 // ---------- helpers ----------
 
 async fn item_exists(pool: &PgPool, group_id: Uuid, item_id: Uuid) -> AppResult<bool> {
-    let row: Option<(i64,)> = sqlx::query_as(
-        "SELECT 1::BIGINT FROM shopping_items WHERE id = $1 AND group_id = $2",
-    )
-    .bind(item_id)
-    .bind(group_id)
-    .fetch_optional(pool)
-    .await?;
+    let row: Option<(i64,)> =
+        sqlx::query_as("SELECT 1::BIGINT FROM shopping_items WHERE id = $1 AND group_id = $2")
+            .bind(item_id)
+            .bind(group_id)
+            .fetch_optional(pool)
+            .await?;
     Ok(row.is_some())
 }
 

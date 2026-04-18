@@ -285,9 +285,14 @@ pub async fn summary(
         .map(|b| b.balance_cents)
         .unwrap_or(0);
 
-    let name_of: HashMap<Uuid, String> =
-        members.iter().map(|(id, name)| (*id, name.clone())).collect();
-    let pairs: Vec<(Uuid, i64)> = balances.iter().map(|b| (b.user_id, b.balance_cents)).collect();
+    let name_of: HashMap<Uuid, String> = members
+        .iter()
+        .map(|(id, name)| (*id, name.clone()))
+        .collect();
+    let pairs: Vec<(Uuid, i64)> = balances
+        .iter()
+        .map(|b| (b.user_id, b.balance_cents))
+        .collect();
 
     let make_settlement = |(from, to, amount): (Uuid, Uuid, i64)| Settlement {
         from_user_id: from,
@@ -352,18 +357,26 @@ pub async fn list_expenses(
 ) -> AppResult<Json<Vec<Expense>>> {
     ensure_member(&state, group_id, user.id).await?;
 
-    let expense_rows: Vec<(Uuid, Uuid, String, i64, DateTime<Utc>, DateTime<Utc>, Uuid, String)> =
-        sqlx::query_as(
-            "SELECT e.id, e.group_id, e.description, e.amount_cents, e.happened_at, e.created_at,
+    let expense_rows: Vec<(
+        Uuid,
+        Uuid,
+        String,
+        i64,
+        DateTime<Utc>,
+        DateTime<Utc>,
+        Uuid,
+        String,
+    )> = sqlx::query_as(
+        "SELECT e.id, e.group_id, e.description, e.amount_cents, e.happened_at, e.created_at,
                     e.paid_by, u.display_name
              FROM expenses e
              INNER JOIN users u ON u.id = e.paid_by
              WHERE e.group_id = $1
              ORDER BY e.happened_at DESC, e.created_at DESC",
-        )
-        .bind(group_id)
-        .fetch_all(&state.db)
-        .await?;
+    )
+    .bind(group_id)
+    .fetch_all(&state.db)
+    .await?;
 
     let split_rows: Vec<(Uuid, Uuid, String, i64)> = sqlx::query_as(
         "SELECT es.expense_id, es.user_id, u.display_name, es.amount_cents
@@ -391,7 +404,16 @@ pub async fn list_expenses(
     let out = expense_rows
         .into_iter()
         .map(
-            |(id, group_id, description, amount_cents, happened_at, created_at, paid_by, paid_by_display_name)| {
+            |(
+                id,
+                group_id,
+                description,
+                amount_cents,
+                happened_at,
+                created_at,
+                paid_by,
+                paid_by_display_name,
+            )| {
                 Expense {
                     id,
                     group_id,
@@ -455,7 +477,16 @@ async fn validate_splits(
 
 /// Load one expense with its splits, joined with display names.
 async fn load_expense(state: &AppState, expense_id: Uuid) -> AppResult<Expense> {
-    let row: (Uuid, Uuid, String, i64, DateTime<Utc>, DateTime<Utc>, Uuid, String) = sqlx::query_as(
+    let row: (
+        Uuid,
+        Uuid,
+        String,
+        i64,
+        DateTime<Utc>,
+        DateTime<Utc>,
+        Uuid,
+        String,
+    ) = sqlx::query_as(
         "SELECT e.id, e.group_id, e.description, e.amount_cents, e.happened_at, e.created_at,
                 e.paid_by, u.display_name
          FROM expenses e
@@ -580,11 +611,10 @@ pub async fn update_expense(
     .await?;
 
     // Make sure the expense actually belongs to this group.
-    let existing: Option<(Uuid,)> =
-        sqlx::query_as("SELECT group_id FROM expenses WHERE id = $1")
-            .bind(expense_id)
-            .fetch_optional(&state.db)
-            .await?;
+    let existing: Option<(Uuid,)> = sqlx::query_as("SELECT group_id FROM expenses WHERE id = $1")
+        .bind(expense_id)
+        .fetch_optional(&state.db)
+        .await?;
     let existing = existing.ok_or_else(|| AppError::NotFound("expense not found".into()))?;
     if existing.0 != group_id {
         return Err(AppError::NotFound("expense not found".into()));
@@ -644,13 +674,11 @@ pub async fn delete_expense(
     ensure_member(&state, group_id, user.id).await?;
 
     // Any group member can delete expenses inside their group.
-    let result = sqlx::query(
-        "DELETE FROM expenses WHERE id = $1 AND group_id = $2",
-    )
-    .bind(expense_id)
-    .bind(group_id)
-    .execute(&state.db)
-    .await?;
+    let result = sqlx::query("DELETE FROM expenses WHERE id = $1 AND group_id = $2")
+        .bind(expense_id)
+        .bind(group_id)
+        .execute(&state.db)
+        .await?;
 
     if result.rows_affected() == 0 {
         return Err(AppError::NotFound("expense not found".into()));
@@ -790,13 +818,11 @@ pub async fn delete_payment(
 ) -> AppResult<Json<serde_json::Value>> {
     ensure_member(&state, group_id, user.id).await?;
 
-    let result = sqlx::query(
-        "DELETE FROM splitwise_payments WHERE id = $1 AND group_id = $2",
-    )
-    .bind(payment_id)
-    .bind(group_id)
-    .execute(&state.db)
-    .await?;
+    let result = sqlx::query("DELETE FROM splitwise_payments WHERE id = $1 AND group_id = $2")
+        .bind(payment_id)
+        .bind(group_id)
+        .execute(&state.db)
+        .await?;
 
     if result.rows_affected() == 0 {
         return Err(AppError::NotFound("payment not found".into()));

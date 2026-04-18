@@ -46,8 +46,8 @@ impl FromRequestParts<AppState> for AuthUser {
             return Err(AppError::Unauthorized);
         }
 
-        let claims = decode_token(token, &state.cfg.jwt_secret)
-            .map_err(|_| AppError::Unauthorized)?;
+        let claims =
+            decode_token(token, &state.cfg.jwt_secret).map_err(|_| AppError::Unauthorized)?;
 
         let row: Option<(Uuid, String, bool)> =
             sqlx::query_as("SELECT id, status, is_admin FROM users WHERE id = $1")

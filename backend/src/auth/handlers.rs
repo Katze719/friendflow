@@ -96,7 +96,11 @@ pub async fn register(
 
     // New users are pending by default; no token is issued until approval.
     let token = if user.status == "approved" {
-        Some(create_token(user.id, &state.cfg.jwt_secret, state.cfg.jwt_expiry_hours)?)
+        Some(create_token(
+            user.id,
+            &state.cfg.jwt_secret,
+            state.cfg.jwt_expiry_hours,
+        )?)
     } else {
         None
     };
