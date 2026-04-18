@@ -31,6 +31,7 @@ const en = {
   layout: {
     signOut: "Sign out",
     admin: "Admin",
+    adminWithPending: "Admin ({{count}} pending)",
     menu: "Menu",
     footer: "friendflow - self-hosted for you and your people",
   },
@@ -398,6 +399,13 @@ const en = {
       "Really delete this user? This only works if they don't own any groups or expenses yet.",
     badgeAdmin: "Admin",
     badgePending: "Pending",
+    searchPlaceholder: "Search by name or email...",
+    searchClear: "Clear search",
+    filterAll: "All",
+    filterPending: "Pending",
+    filterApproved: "Approved",
+    filterAdmin: "Admins",
+    noResults: "No users match your filters.",
   },
 };
 

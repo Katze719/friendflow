@@ -1,5 +1,5 @@
-import { Check, ChevronDown, Crown, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { Check, ChevronDown, Crown, Search, Trash2, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { adminApi } from "../api/admin";
@@ -8,23 +8,50 @@ import type { AdminUserRow } from "../api/types";
 import { useAuth } from "../context/AuthContext";
 import { formatDate } from "../lib/format";
 
+type StatusFilter = "all" | "pending" | "approved" | "admin";
+
 export default function AdminUsers() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [users, setUsers] = useState<AdminUserRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   const reload = useCallback(() => {
     adminApi
       .listUsers()
-      .then(setUsers)
+      .then((rows) => {
+        setUsers(rows);
+        window.dispatchEvent(new CustomEvent("admin:pending-changed"));
+      })
       .catch((e) => setError(e instanceof ApiError ? e.message : t("common.error")));
   }, [t]);
 
   useEffect(() => {
     reload();
   }, [reload]);
+
+  const filteredUsers = useMemo(() => {
+    if (!users) return null;
+    const q = query.trim().toLowerCase();
+    return users.filter((u) => {
+      if (statusFilter === "pending" && u.status !== "pending") return false;
+      if (statusFilter === "approved" && u.status !== "approved") return false;
+      if (statusFilter === "admin" && !u.is_admin) return false;
+      if (!q) return true;
+      return (
+        u.display_name.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q)
+      );
+    });
+  }, [users, query, statusFilter]);
+
+  const pendingCount = useMemo(
+    () => (users ? users.filter((u) => u.status === "pending").length : 0),
+    [users],
+  );
 
   if (!user?.is_admin) {
     return (
@@ -75,13 +102,95 @@ export default function AdminUsers() {
         <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">{error}</p>
       )}
 
+      {users !== null && users.length > 0 && (
+        <div className="space-y-3">
+          <div className="relative">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500"
+              aria-hidden="true"
+            />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={t("admin.searchPlaceholder")}
+              aria-label={t("admin.searchPlaceholder")}
+              className="input w-full pl-9 pr-9"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                aria-label={t("admin.searchClear")}
+                title={t("admin.searchClear")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {(
+              [
+                { id: "all" as const, label: t("admin.filterAll"), count: users.length },
+                {
+                  id: "pending" as const,
+                  label: t("admin.filterPending"),
+                  count: pendingCount,
+                },
+                {
+                  id: "approved" as const,
+                  label: t("admin.filterApproved"),
+                  count: users.filter((u) => u.status === "approved").length,
+                },
+                {
+                  id: "admin" as const,
+                  label: t("admin.filterAdmin"),
+                  count: users.filter((u) => u.is_admin).length,
+                },
+              ] as const
+            ).map((chip) => {
+              const active = statusFilter === chip.id;
+              return (
+                <button
+                  key={chip.id}
+                  type="button"
+                  onClick={() => setStatusFilter(chip.id)}
+                  aria-pressed={active}
+                  className={
+                    active
+                      ? "inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-3 py-1 text-xs font-medium text-white dark:bg-slate-100 dark:text-slate-900"
+                      : "inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+                  }
+                >
+                  {chip.label}
+                  <span
+                    className={
+                      active
+                        ? "rounded-full bg-white/20 px-1.5 text-[10px] font-semibold dark:bg-slate-900/20"
+                        : "rounded-full bg-slate-100 px-1.5 text-[10px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                    }
+                  >
+                    {chip.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {users === null ? (
         <p className="text-slate-500 dark:text-slate-400">{t("common.loading")}</p>
       ) : users.length === 0 ? (
         <p className="card p-8 text-center text-slate-500 dark:text-slate-400">{t("admin.empty")}</p>
+      ) : filteredUsers && filteredUsers.length === 0 ? (
+        <p className="card p-8 text-center text-slate-500 dark:text-slate-400">
+          {t("admin.noResults")}
+        </p>
       ) : (
         <ul className="space-y-2">
-          {users.map((u) => {
+          {(filteredUsers ?? users).map((u) => {
             const pending = u.status === "pending";
             const isSelf = u.id === user?.id;
             const k = (action: string) => busy === u.id + ":" + action;

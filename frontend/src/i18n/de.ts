@@ -33,6 +33,7 @@ const de: Translations = {
   layout: {
     signOut: "Abmelden",
     admin: "Admin",
+    adminWithPending: "Admin ({{count}} offen)",
     menu: "Menü",
     footer: "friendflow - selbst gehostet für dich und deine Leute",
   },
@@ -402,6 +403,13 @@ const de: Translations = {
       "Diesen Nutzer wirklich löschen? Das geht nur, wenn er/sie noch keine Gruppen oder Ausgaben angelegt hat.",
     badgeAdmin: "Admin",
     badgePending: "Wartet",
+    searchPlaceholder: "Nach Name oder E-Mail suchen...",
+    searchClear: "Suche leeren",
+    filterAll: "Alle",
+    filterPending: "Offen",
+    filterApproved: "Freigeschaltet",
+    filterAdmin: "Admins",
+    noResults: "Keine Nutzer passen zu deinen Filtern.",
   },
 };
 

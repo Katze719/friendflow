@@ -1,17 +1,54 @@
 import { LogOut, Shield } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
+import { adminApi } from "../api/admin";
 import { useAuth } from "../context/AuthContext";
 import HeaderMenu from "./HeaderMenu";
 import InstallAppButton from "./InstallAppButton";
 import LanguageSwitcher from "./LanguageSwitcher";
 import ThemeSwitcher from "./ThemeSwitcher";
 
+const PENDING_POLL_MS = 60_000;
+
 export default function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const isAdmin = !!user?.is_admin;
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    if (!isAdmin) {
+      setPendingCount(0);
+      return;
+    }
+    let cancelled = false;
+    const load = () => {
+      adminApi
+        .listUsers("pending")
+        .then((rows) => {
+          if (!cancelled) setPendingCount(rows.length);
+        })
+        .catch(() => {});
+    };
+    load();
+    const interval = window.setInterval(load, PENDING_POLL_MS);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") load();
+    };
+    const onChanged = () => load();
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("focus", load);
+    window.addEventListener("admin:pending-changed", onChanged);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", load);
+      window.removeEventListener("admin:pending-changed", onChanged);
+    };
+  }, [isAdmin]);
 
   return (
     <div className="min-h-full flex flex-col">
@@ -36,14 +73,32 @@ export default function Layout({ children }: { children: ReactNode }) {
               <ThemeSwitcher />
               <LanguageSwitcher />
             </div>
-            {user?.is_admin && (
+            {isAdmin && (
               <Link
                 to="/admin/users"
-                className="btn-ghost"
-                aria-label={t("layout.admin")}
-                title={t("layout.admin")}
+                className="btn-ghost relative"
+                aria-label={
+                  pendingCount > 0
+                    ? t("layout.adminWithPending", { count: pendingCount })
+                    : t("layout.admin")
+                }
+                title={
+                  pendingCount > 0
+                    ? t("layout.adminWithPending", { count: pendingCount })
+                    : t("layout.admin")
+                }
               >
-                <Shield className="h-4 w-4" />
+                <span className="relative inline-flex">
+                  <Shield className="h-4 w-4" />
+                  {pendingCount > 0 && (
+                    <span
+                      className="absolute -right-1.5 -top-1.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-semibold leading-none text-white ring-2 ring-white dark:ring-slate-950"
+                      aria-hidden="true"
+                    >
+                      {pendingCount > 9 ? "9+" : pendingCount}
+                    </span>
+                  )}
+                </span>
                 <span className="hidden sm:inline">{t("layout.admin")}</span>
               </Link>
             )}
