@@ -2,6 +2,7 @@ import {
   ArrowRight,
   CalendarDays,
   Check,
+  Github,
   Globe,
   Lock,
   type LucideIcon,
@@ -20,6 +21,8 @@ import { Link } from "react-router-dom";
 import InstallAppButton from "../components/InstallAppButton";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 import ThemeSwitcher from "../components/ThemeSwitcher";
+
+const GITHUB_URL = "https://github.com/Katze719/friendflow";
 
 /**
  * Public marketing / intro page shown to unauthenticated visitors when
@@ -50,6 +53,15 @@ export default function Landing() {
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-safe py-6 text-xs text-slate-500 sm:flex-row dark:text-slate-400">
           <span>{t("layout.footer")}</span>
           <div className="flex items-center gap-4">
+            <a
+              href={GITHUB_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 hover:text-slate-900 dark:hover:text-slate-100"
+            >
+              <Github className="h-3.5 w-3.5" />
+              {t("landing.nav.github")}
+            </a>
             <Link to="/login" className="hover:text-slate-900 dark:hover:text-slate-100">
               {t("landing.nav.signIn")}
             </Link>
@@ -103,6 +115,17 @@ function Header() {
             <ThemeSwitcher />
             <LanguageSwitcher />
           </div>
+          <a
+            href={GITHUB_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-ghost text-sm"
+            aria-label={t("landing.nav.github")}
+            title={t("landing.nav.github")}
+          >
+            <Github className="h-4 w-4" />
+            <span className="hidden md:inline">{t("landing.nav.github")}</span>
+          </a>
           <Link
             to="/login"
             className="btn-ghost text-sm"
@@ -147,6 +170,16 @@ function Hero() {
             <Link to="/login" className="btn-secondary px-5 py-2.5 text-base">
               {t("landing.hero.ctaSecondary")}
             </Link>
+            <a
+              href={GITHUB_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-ghost px-4 py-2.5 text-base"
+              aria-label={t("landing.hero.ctaGithub")}
+            >
+              <Github className="h-4 w-4" />
+              {t("landing.hero.ctaGithub")}
+            </a>
             <InstallAppButton variant="ghost" />
           </div>
           <ul className="mt-8 grid max-w-xl gap-2 text-sm text-slate-600 dark:text-slate-300 sm:grid-cols-2">
@@ -368,6 +401,18 @@ function Values() {
               <p className="text-sm text-slate-600 dark:text-slate-300">
                 {t(`landing.values.${id}.body`)}
               </p>
+              {id === "selfHosted" && (
+                <a
+                  href={GITHUB_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1 inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
+                >
+                  <Github className="h-4 w-4" />
+                  {t("landing.values.selfHosted.cta")}
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </a>
+              )}
             </div>
           ))}
         </div>

@@ -32,6 +32,14 @@ services:
       BIND_ADDR: 0.0.0.0:3000
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
       RUST_LOG: ${RUST_LOG:-info}
+      # Controls how new sign-ups are handled:
+      #   approval (default) - new accounts start as "pending" and need
+      #                        an admin to approve them before they can
+      #                        sign in (safe default for private instances).
+      #   open               - new accounts are auto-approved and can sign
+      #                        in immediately after registration (good for
+      #                        public / self-hosted demo instances).
+      REGISTRATION_MODE: ${REGISTRATION_MODE:-approval}
     # Reachable only inside the compose network (as `backend:3000`).
     # The frontend's nginx proxies /api/ to it; no host port exposure needed.
     expose:

@@ -5,6 +5,7 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
+    config::RegistrationMode,
     error::{AppError, AppResult},
     state::AppState,
 };
@@ -74,16 +75,36 @@ pub async fn register(
     let hash = password::hash_password(&payload.password)
         .map_err(|e| AppError::Internal(anyhow::anyhow!("hash error: {e}")))?;
 
-    let row: (Uuid, String, String, String, bool, DateTime<Utc>) = sqlx::query_as(
-        "INSERT INTO users (email, display_name, password_hash)
-         VALUES ($1, $2, $3)
-         RETURNING id, email, display_name, status, is_admin, created_at",
-    )
-    .bind(&email)
-    .bind(&display_name)
-    .bind(&hash)
-    .fetch_one(&state.db)
-    .await?;
+    // Depending on REGISTRATION_MODE either leave the user pending (default;
+    // an admin has to approve them before they can log in) or auto-approve
+    // them so they can start using the app immediately.
+    let row: (Uuid, String, String, String, bool, DateTime<Utc>) =
+        match state.cfg.registration_mode {
+            RegistrationMode::Approval => {
+                sqlx::query_as(
+                    "INSERT INTO users (email, display_name, password_hash)
+                     VALUES ($1, $2, $3)
+                     RETURNING id, email, display_name, status, is_admin, created_at",
+                )
+                .bind(&email)
+                .bind(&display_name)
+                .bind(&hash)
+                .fetch_one(&state.db)
+                .await?
+            }
+            RegistrationMode::Open => {
+                sqlx::query_as(
+                    "INSERT INTO users (email, display_name, password_hash, status, approved_at)
+                     VALUES ($1, $2, $3, 'approved', NOW())
+                     RETURNING id, email, display_name, status, is_admin, created_at",
+                )
+                .bind(&email)
+                .bind(&display_name)
+                .bind(&hash)
+                .fetch_one(&state.db)
+                .await?
+            }
+        };
 
     let user = UserResponse {
         id: row.0,
@@ -94,7 +115,8 @@ pub async fn register(
         created_at: row.5,
     };
 
-    // New users are pending by default; no token is issued until approval.
+    // Only approved users get a token; pending users still need an admin
+    // to unlock their account before they can sign in.
     let token = if user.status == "approved" {
         Some(create_token(
             user.id,

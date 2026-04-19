@@ -45,6 +45,7 @@ const en = {
     nav: {
       signIn: "Sign in",
       signUp: "Get started",
+      github: "GitHub",
     },
     hero: {
       eyebrow: "Plan together, self-hosted",
@@ -53,6 +54,7 @@ const en = {
         "friendflow bundles trip planning, shared expenses, a group calendar and shopping lists into a single app you host yourself. No tracking, no ads - just the tools you and your friends actually use.",
       ctaPrimary: "Create your free account",
       ctaSecondary: "I already have an account",
+      ctaGithub: "View source",
       bullet1: "Unlimited groups, trips and expenses",
       bullet2: "Works offline on your phone (PWA)",
       bullet3: "Your data stays on your server",
@@ -134,6 +136,7 @@ const en = {
       selfHosted: {
         title: "Runs anywhere",
         body: "Two containers via docker-compose. A small VPS is more than enough for a group of friends.",
+        cta: "Source on GitHub",
       },
       pwa: {
         title: "Home screen ready",

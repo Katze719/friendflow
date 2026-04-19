@@ -47,6 +47,7 @@ const de: Translations = {
     nav: {
       signIn: "Anmelden",
       signUp: "Loslegen",
+      github: "GitHub",
     },
     hero: {
       eyebrow: "Gemeinsam planen, selbst gehostet",
@@ -55,6 +56,7 @@ const de: Translations = {
         "friendflow bündelt Reiseplanung, geteilte Ausgaben, einen Gruppenkalender und Einkaufslisten in einer App, die du selbst hostest. Kein Tracking, keine Werbung - nur Tools, die du und deine Leute wirklich nutzt.",
       ctaPrimary: "Kostenloses Konto anlegen",
       ctaSecondary: "Ich habe schon ein Konto",
+      ctaGithub: "Quellcode ansehen",
       bullet1: "Unbegrenzt Gruppen, Reisen und Ausgaben",
       bullet2: "Funktioniert als App auf deinem Handy",
       bullet3: "Deine Daten bleiben auf deinem Server",
@@ -136,6 +138,7 @@ const de: Translations = {
       selfHosted: {
         title: "Läuft überall",
         body: "Zwei Container per docker-compose. Ein kleiner VPS reicht für eine Freundesgruppe locker.",
+        cta: "Quellcode auf GitHub",
       },
       pwa: {
         title: "Fit für den Home-Screen",
