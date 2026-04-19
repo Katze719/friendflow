@@ -15,12 +15,12 @@ import {
   type FormEvent,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { ApiError } from "../../api/client";
 import { groupsApi } from "../../api/groups";
-import type { GroupDetail, ShoppingItem } from "../../api/types";
+import type { GroupDetail, ShoppingItem, ShoppingList } from "../../api/types";
 import { useConfirm, useToast } from "../../ui/UIProvider";
-import { shoppingApi } from "./api";
+import { shoppingApi, shoppingListsApi } from "./api";
 
 /**
  * Curated list of common grocery items for the "type-to-search" suggestions in
@@ -108,27 +108,45 @@ const SHOPPING_CATALOG: { category: string; items: string[] }[] = [
   },
 ];
 
+/**
+ * Items view for exactly one shopping list. The "Trip-like" overview page
+ * lists all lists as cards; this page is what you get after clicking one.
+ */
 export default function ShoppingOverviewPage() {
   const { t } = useTranslation();
-  const { groupId } = useParams<{ groupId: string }>();
+  const navigate = useNavigate();
+  const { groupId, listId } = useParams<{
+    groupId: string;
+    listId: string;
+  }>();
   const confirm = useConfirm();
   const toast = useToast();
   const [group, setGroup] = useState<GroupDetail | null>(null);
+  const [list, setList] = useState<ShoppingList | null>(null);
   const [items, setItems] = useState<ShoppingItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [clearing, setClearing] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState("");
+  const [busyList, setBusyList] = useState(false);
 
   const reload = useCallback(() => {
-    if (!groupId) return;
-    Promise.all([groupsApi.get(groupId), shoppingApi.list(groupId)])
-      .then(([g, i]) => {
+    if (!groupId || !listId) return;
+    Promise.all([
+      groupsApi.get(groupId),
+      shoppingListsApi.list(groupId),
+      shoppingApi.list(groupId, listId),
+    ])
+      .then(([g, allLists, i]) => {
         setGroup(g);
+        const active = allLists.find((l) => l.id === listId) ?? null;
+        setList(active);
         setItems(i);
       })
       .catch((e) =>
         setError(e instanceof ApiError ? e.message : t("common.error")),
       );
-  }, [groupId, t]);
+  }, [groupId, listId, t]);
 
   useEffect(() => {
     reload();
@@ -157,7 +175,7 @@ export default function ShoppingOverviewPage() {
   }
 
   async function onClearDone() {
-    if (!groupId) return;
+    if (!groupId || !listId) return;
     if (done.length === 0) return;
     const ok = await confirm({
       title: t("shopping.overview.clearTitle"),
@@ -168,12 +186,51 @@ export default function ShoppingOverviewPage() {
     if (!ok) return;
     setClearing(true);
     try {
-      await shoppingApi.clearDone(groupId);
+      await shoppingApi.clearDone(groupId, listId);
       setItems((prev) => (prev ? prev.filter((i) => !i.is_done) : prev));
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : t("common.error"));
     } finally {
       setClearing(false);
+    }
+  }
+
+  async function onRenameSubmit(e: FormEvent) {
+    e.preventDefault();
+    if (!groupId || !listId) return;
+    const trimmed = renameValue.trim();
+    if (!trimmed) return;
+    setBusyList(true);
+    try {
+      const updated = await shoppingListsApi.rename(groupId, listId, {
+        name: trimmed,
+      });
+      setList(updated);
+      setRenaming(false);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : t("common.error"));
+    } finally {
+      setBusyList(false);
+    }
+  }
+
+  async function onDeleteList() {
+    if (!groupId || !list) return;
+    const ok = await confirm({
+      title: t("shopping.lists.deleteTitle"),
+      message: t("shopping.lists.deleteConfirm", { name: list.name }),
+      confirmLabel: t("common.delete"),
+      variant: "danger",
+    });
+    if (!ok) return;
+    setBusyList(true);
+    try {
+      await shoppingListsApi.remove(groupId, list.id);
+      toast.success(t("shopping.lists.deleted"));
+      navigate(`/groups/${groupId}/shopping`);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : t("common.error"));
+      setBusyList(false);
     }
   }
 
@@ -184,7 +241,7 @@ export default function ShoppingOverviewPage() {
       </p>
     );
   }
-  if (!group || !items) {
+  if (!group || !list || !items) {
     return <p className="text-slate-500 dark:text-slate-400">{t("common.loading")}</p>;
   }
 
@@ -192,22 +249,84 @@ export default function ShoppingOverviewPage() {
     <div className="space-y-6">
       <div>
         <Link
-          to={`/groups/${group.id}`}
+          to={`/groups/${group.id}/shopping`}
           className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
         >
-          <ArrowLeft className="h-4 w-4" /> {t("shopping.overview.backToGroup")}
+          <ArrowLeft className="h-4 w-4" /> {t("shopping.overview.backToLists")}
         </Link>
-        <div className="mt-1">
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            {t("shopping.overview.title")}
-          </h1>
-          <p className="truncate text-sm text-slate-500 dark:text-slate-400">
-            {group.name} - {t("shopping.overview.subtitle")}
-          </p>
+        <div className="mt-1 flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            {renaming ? (
+              <form
+                onSubmit={onRenameSubmit}
+                className="flex flex-col gap-2 sm:flex-row sm:items-end"
+              >
+                <div className="flex-1 space-y-1">
+                  <label className="label" htmlFor="rename_list">
+                    {t("shopping.overview.renameTitle")}
+                  </label>
+                  <input
+                    id="rename_list"
+                    className="input"
+                    required
+                    autoFocus
+                    maxLength={120}
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                  />
+                </div>
+                <div className="flex gap-2 sm:pb-0.5">
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    onClick={() => setRenaming(false)}
+                    disabled={busyList}
+                  >
+                    {t("common.cancel")}
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                    disabled={busyList}
+                  >
+                    {t("common.save")}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <>
+                <div className="flex items-center gap-2">
+                  <h1 className="truncate text-2xl font-semibold tracking-tight sm:text-3xl">
+                    {list.name}
+                  </h1>
+                  <button
+                    type="button"
+                    className="btn-ghost -my-1"
+                    onClick={() => {
+                      setRenameValue(list.name);
+                      setRenaming(true);
+                    }}
+                    aria-label={t("shopping.overview.renameTitle")}
+                    title={t("shopping.overview.renameTitle")}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                </div>
+                <p className="truncate text-sm text-slate-500 dark:text-slate-400">
+                  {group.name} - {t("shopping.overview.subtitle")}
+                </p>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
-      <AddItemForm groupId={group.id} existing={items} onAdded={prependItem} />
+      <AddItemForm
+        groupId={group.id}
+        listId={list.id}
+        existing={items}
+        onAdded={prependItem}
+      />
 
       {items.length === 0 ? (
         <div className="card p-8 text-center">
@@ -236,6 +355,7 @@ export default function ShoppingOverviewPage() {
                     key={it.id}
                     item={it}
                     groupId={group.id}
+                    listId={list.id}
                     onReplace={replaceItem}
                     onRemove={removeItemLocal}
                   />
@@ -266,6 +386,7 @@ export default function ShoppingOverviewPage() {
                     key={it.id}
                     item={it}
                     groupId={group.id}
+                    listId={list.id}
                     onReplace={replaceItem}
                     onRemove={removeItemLocal}
                   />
@@ -275,16 +396,30 @@ export default function ShoppingOverviewPage() {
           )}
         </>
       )}
+
+      <div className="flex justify-end">
+        <button
+          type="button"
+          className="btn-ghost text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40"
+          onClick={onDeleteList}
+          disabled={busyList}
+        >
+          <Trash2 className="h-4 w-4" />
+          {t("shopping.overview.deleteList")}
+        </button>
+      </div>
     </div>
   );
 }
 
 function AddItemForm({
   groupId,
+  listId,
   existing,
   onAdded,
 }: {
   groupId: string;
+  listId: string;
   existing: ShoppingItem[];
   onAdded: (item: ShoppingItem) => void;
 }) {
@@ -369,7 +504,7 @@ function AddItemForm({
     setError(null);
     setLoading(true);
     try {
-      const created = await shoppingApi.create(groupId, {
+      const created = await shoppingApi.create(groupId, listId, {
         name: trimmed,
         quantity: quantity.trim(),
       });
@@ -485,11 +620,13 @@ function AddItemForm({
 function ItemRow({
   item,
   groupId,
+  listId,
   onReplace,
   onRemove,
 }: {
   item: ShoppingItem;
   groupId: string;
+  listId: string;
   onReplace: (updated: ShoppingItem) => void;
   onRemove: (id: string) => void;
 }) {
@@ -514,7 +651,7 @@ function ItemRow({
     onReplace(optimistic);
     setBusy(true);
     try {
-      const updated = await shoppingApi.toggle(groupId, item.id);
+      const updated = await shoppingApi.toggle(groupId, listId, item.id);
       onReplace(updated);
     } catch (e) {
       onReplace(item);
@@ -534,7 +671,7 @@ function ItemRow({
     if (!ok) return;
     setBusy(true);
     try {
-      await shoppingApi.remove(groupId, item.id);
+      await shoppingApi.remove(groupId, listId, item.id);
       onRemove(item.id);
     } catch (e) {
       toast.error(e instanceof ApiError ? e.message : t("common.error"));
@@ -549,7 +686,7 @@ function ItemRow({
     if (!trimmed) return;
     setBusy(true);
     try {
-      const updated = await shoppingApi.update(groupId, item.id, {
+      const updated = await shoppingApi.update(groupId, listId, item.id, {
         name: trimmed,
         quantity: quantity.trim(),
         note: note.trim(),

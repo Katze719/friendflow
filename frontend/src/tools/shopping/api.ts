@@ -1,5 +1,5 @@
 import { api } from "../../api/client";
-import type { ShoppingItem } from "../../api/types";
+import type { ShoppingItem, ShoppingList } from "../../api/types";
 
 export interface CreateItemPayload {
   name: string;
@@ -13,34 +13,74 @@ export interface UpdateItemPayload {
   note?: string;
 }
 
-export const shoppingApi = {
+export interface CreateListPayload {
+  name: string;
+}
+
+export interface RenameListPayload {
+  name: string;
+}
+
+/** List-level CRUD. A group can own any number of shopping lists; the UI
+ *  lets users switch between them via a dropdown. */
+export const shoppingListsApi = {
   list: (groupId: string) =>
-    api<ShoppingItem[]>(`/api/groups/${groupId}/shopping/items`),
-  create: (groupId: string, body: CreateItemPayload) =>
-    api<ShoppingItem>(`/api/groups/${groupId}/shopping/items`, {
+    api<ShoppingList[]>(`/api/groups/${groupId}/shopping/lists`),
+  create: (groupId: string, body: CreateListPayload) =>
+    api<ShoppingList>(`/api/groups/${groupId}/shopping/lists`, {
       method: "POST",
       body,
     }),
-  update: (groupId: string, itemId: string, body: UpdateItemPayload) =>
-    api<ShoppingItem>(`/api/groups/${groupId}/shopping/items/${itemId}`, {
+  rename: (groupId: string, listId: string, body: RenameListPayload) =>
+    api<ShoppingList>(`/api/groups/${groupId}/shopping/lists/${listId}`, {
       method: "PATCH",
       body,
     }),
-  toggle: (groupId: string, itemId: string, done?: boolean) =>
+  /** Returns the list the UI should switch to (the safeguard list if the
+   *  caller deleted the last one; else any remaining list). */
+  remove: (groupId: string, listId: string) =>
+    api<ShoppingList>(`/api/groups/${groupId}/shopping/lists/${listId}`, {
+      method: "DELETE",
+    }),
+};
+
+/** Item CRUD - all scoped to a specific list now. */
+export const shoppingApi = {
+  list: (groupId: string, listId: string) =>
+    api<ShoppingItem[]>(
+      `/api/groups/${groupId}/shopping/lists/${listId}/items`,
+    ),
+  create: (groupId: string, listId: string, body: CreateItemPayload) =>
     api<ShoppingItem>(
-      `/api/groups/${groupId}/shopping/items/${itemId}/toggle`,
+      `/api/groups/${groupId}/shopping/lists/${listId}/items`,
+      { method: "POST", body },
+    ),
+  update: (
+    groupId: string,
+    listId: string,
+    itemId: string,
+    body: UpdateItemPayload,
+  ) =>
+    api<ShoppingItem>(
+      `/api/groups/${groupId}/shopping/lists/${listId}/items/${itemId}`,
+      { method: "PATCH", body },
+    ),
+  toggle: (groupId: string, listId: string, itemId: string, done?: boolean) =>
+    api<ShoppingItem>(
+      `/api/groups/${groupId}/shopping/lists/${listId}/items/${itemId}/toggle`,
       {
         method: "PUT",
         body: done === undefined ? {} : { done },
       },
     ),
-  remove: (groupId: string, itemId: string) =>
-    api<{ ok: true }>(`/api/groups/${groupId}/shopping/items/${itemId}`, {
-      method: "DELETE",
-    }),
-  clearDone: (groupId: string) =>
+  remove: (groupId: string, listId: string, itemId: string) =>
+    api<{ ok: true }>(
+      `/api/groups/${groupId}/shopping/lists/${listId}/items/${itemId}`,
+      { method: "DELETE" },
+    ),
+  clearDone: (groupId: string, listId: string) =>
     api<{ ok: true; removed: number }>(
-      `/api/groups/${groupId}/shopping/items/clear-done`,
+      `/api/groups/${groupId}/shopping/lists/${listId}/items/clear-done`,
       { method: "POST" },
     ),
 };

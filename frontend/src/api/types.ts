@@ -86,6 +86,10 @@ export interface Expense {
   amount_cents: number;
   happened_at: string;
   created_at: string;
+  /** Optional link to a trip in the same group. When set, this expense
+   *  contributes to that trip's budget. `null` means general group expense. */
+  trip_id: string | null;
+  trip_name: string | null;
   splits: ExpenseSplit[];
 }
 
@@ -121,6 +125,8 @@ export interface Trip {
   end_date: string | null;
   destinations: TripDestination[];
   budget_cents: number | null;
+  /** Sum of expenses tied to this trip (in cents). */
+  spent_cents: number;
   position: number;
   created_by: string;
   created_by_display_name: string;
@@ -217,9 +223,23 @@ export interface CalendarEvent {
   updated_at: string;
 }
 
+export interface ShoppingList {
+  id: string;
+  group_id: string;
+  name: string;
+  /** Number of unchecked items on this list. */
+  items_open: number;
+  /** Number of items ticked off. */
+  items_done: number;
+  created_by: string;
+  created_at: string;
+}
+
 export interface ShoppingItem {
   id: string;
   group_id: string;
+  /** List this item belongs to. Every item has exactly one parent list. */
+  list_id: string;
   name: string;
   quantity: string;
   note: string;

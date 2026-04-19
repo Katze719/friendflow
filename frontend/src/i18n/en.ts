@@ -470,6 +470,8 @@ const en = {
       paymentDeleteTitle: "Delete payment?",
       paymentDeleteConfirm: "Really delete this payment?",
       paymentDeleteAria: "Delete payment",
+      forTrip: "For trip: {{name}}",
+      forTripTooltip: "This expense counts towards the trip's budget.",
     },
     payment: {
       title: "Record payment",
@@ -504,6 +506,10 @@ const en = {
       errorNoParticipants: "At least one person must participate.",
       submit: "Save",
       submitting: "Saving...",
+      trip: "Associated trip",
+      tripNone: "No trip (general group expense)",
+      tripHint:
+        "Pick a trip to have this expense count towards that trip's budget.",
     },
   },
   trips: {
@@ -618,8 +624,8 @@ const en = {
       deleteTitle: "Delete trip?",
       deleteConfirm:
         "Delete '{{name}}' including all of its links, itinerary entries and packing items?",
-      budgetGroupWide:
-        "Note: spend currently reflects the whole group, not only this trip.",
+      budgetFromAssigned:
+        "Only counts expenses that were explicitly assigned to this trip.",
       datesTitle: "Trip dates",
       startDate: "Arrival",
       endDate: "Departure",
@@ -836,6 +842,34 @@ const en = {
     },
   },
   shopping: {
+    lists: {
+      backToGroup: "Back to group",
+      title: "Shopping lists",
+      subtitle: "Pick a list or create a new one.",
+      newList: "New list",
+      nameLabel: "List name",
+      namePlaceholder: "e.g. Camping trip",
+      create: "Create list",
+      createFirst: "Create first list",
+      emptyTitle: "No lists yet",
+      emptyHint:
+        "Create your first list - e.g. 'Weekly groceries'. You can have as many lists as you need.",
+      cardEmpty: "No items yet",
+      cardOpen_one: "{{count}} open item",
+      cardOpen_other: "{{count}} open items",
+      cardDone_one: "{{count}} done",
+      cardDone_other: "{{count}} done",
+      status: {
+        empty: "Empty",
+        active: "Active",
+        done: "All done",
+      },
+      delete: "Delete list",
+      deleteTitle: "Delete list?",
+      deleteConfirm:
+        "Delete '{{name}}' and all of its items? If this is your last list, a fresh empty one will be created.",
+      deleted: "List deleted.",
+    },
     overview: {
       backToGroup: "Back to group",
       title: "Shopping list",
@@ -861,6 +895,9 @@ const en = {
       doneBy: "bought by {{name}}",
       deleteTitle: "Delete item?",
       deleteConfirm: 'Really delete "{{name}}"?',
+      backToLists: "All lists",
+      renameTitle: "Rename list",
+      deleteList: "Delete list",
       empty: {
         title: "No items yet",
         description: "Add the first thing you need.",

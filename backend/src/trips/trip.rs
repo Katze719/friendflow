@@ -38,6 +38,9 @@ pub struct Trip {
     pub end_date: Option<NaiveDate>,
     pub destinations: Vec<Destination>,
     pub budget_cents: Option<i64>,
+    /// Sum of all expenses explicitly tied to this trip. Expenses without
+    /// a `trip_id` don't contribute - those are general group expenses.
+    pub spent_cents: i64,
     pub position: i32,
     pub created_by: Uuid,
     pub created_by_display_name: String,
@@ -323,12 +326,17 @@ type Row = (
     String,
     DateTime<Utc>,
     DateTime<Utc>,
+    i64,
 );
 
+// `spent_cents` comes from a correlated subquery so each trip carries its
+// precomputed budget usage without a separate round-trip. COALESCE keeps it
+// at 0 for trips that have no expenses yet.
 const SELECT: &str = "\
     SELECT t.id, t.group_id, t.name, t.start_date, t.end_date, t.destinations, \
            t.budget_cents, t.position, t.created_by, u.display_name, \
-           t.created_at, t.updated_at \
+           t.created_at, t.updated_at, \
+           COALESCE((SELECT SUM(e.amount_cents) FROM expenses e WHERE e.trip_id = t.id), 0)::BIGINT AS spent_cents \
       FROM trips t \
       INNER JOIN users u ON u.id = t.created_by";
 
@@ -347,6 +355,7 @@ fn row_into_trip(row: Row) -> Trip {
         created_by_display_name: row.9,
         created_at: row.10,
         updated_at: row.11,
+        spent_cents: row.12,
     }
 }
 

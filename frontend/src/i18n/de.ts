@@ -472,6 +472,8 @@ const de: Translations = {
       paymentDeleteTitle: "Zahlung löschen?",
       paymentDeleteConfirm: "Diese Zahlung wirklich löschen?",
       paymentDeleteAria: "Zahlung löschen",
+      forTrip: "Für Reise: {{name}}",
+      forTripTooltip: "Diese Ausgabe zählt zum Budget der Reise.",
     },
     payment: {
       title: "Zahlung eintragen",
@@ -507,6 +509,10 @@ const de: Translations = {
       errorNoParticipants: "Mindestens eine Person muss beteiligt sein.",
       submit: "Speichern",
       submitting: "Speichere...",
+      trip: "Zugeordnete Reise",
+      tripNone: "Keine Reise (normale Gruppenausgabe)",
+      tripHint:
+        "Mit einer Reise verknüpft zählt die Ausgabe direkt in deren Budget.",
     },
   },
   trips: {
@@ -621,8 +627,8 @@ const de: Translations = {
       deleteTitle: "Reise löschen?",
       deleteConfirm:
         "Soll '{{name}}' mit allen Links, Einträgen und Packlistenpunkten gelöscht werden?",
-      budgetGroupWide:
-        "Hinweis: Die Ausgaben beziehen sich derzeit auf die gesamte Gruppe, nicht nur diese Reise.",
+      budgetFromAssigned:
+        "Zählt nur Ausgaben, die dieser Reise ausdrücklich zugeordnet wurden.",
       datesTitle: "Reisedaten",
       startDate: "Anreise",
       endDate: "Abreise",
@@ -840,6 +846,34 @@ const de: Translations = {
     },
   },
   shopping: {
+    lists: {
+      backToGroup: "Zur Gruppe",
+      title: "Einkaufslisten",
+      subtitle: "Wähle eine Liste aus oder leg eine neue an.",
+      newList: "Neue Liste",
+      nameLabel: "Listenname",
+      namePlaceholder: "z. B. Campingtrip",
+      create: "Liste anlegen",
+      createFirst: "Erste Liste anlegen",
+      emptyTitle: "Noch keine Listen",
+      emptyHint:
+        "Leg deine erste Liste an - z. B. 'Wocheneinkauf'. Du kannst beliebig viele Listen parallel führen.",
+      cardEmpty: "Noch keine Einträge",
+      cardOpen_one: "{{count}} offener Artikel",
+      cardOpen_other: "{{count}} offene Artikel",
+      cardDone_one: "{{count}} erledigt",
+      cardDone_other: "{{count}} erledigt",
+      status: {
+        empty: "Leer",
+        active: "Aktiv",
+        done: "Alles fertig",
+      },
+      delete: "Liste löschen",
+      deleteTitle: "Liste löschen?",
+      deleteConfirm:
+        "Soll '{{name}}' mit allen Artikeln gelöscht werden? Ist es deine letzte Liste, wird automatisch eine neue leere angelegt.",
+      deleted: "Liste gelöscht.",
+    },
     overview: {
       backToGroup: "Zur Gruppe",
       title: "Einkaufsliste",
@@ -865,6 +899,9 @@ const de: Translations = {
       doneBy: "gekauft von {{name}}",
       deleteTitle: "Artikel löschen?",
       deleteConfirm: '"{{name}}" wirklich löschen?',
+      backToLists: "Alle Listen",
+      renameTitle: "Liste umbenennen",
+      deleteList: "Liste löschen",
       empty: {
         title: "Noch keine Einträge",
         description: "Leg den ersten Artikel an, den ihr braucht.",

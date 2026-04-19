@@ -12,15 +12,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { ApiError } from "../../api/client";
-import type {
-  GroupDetail,
-  Settlement,
-  SplitwiseSummary,
-  Trip,
-  TripDestination,
-} from "../../api/types";
+import type { GroupDetail, Trip, TripDestination } from "../../api/types";
 import HelpBanner from "../../components/HelpBanner";
-import { splitwiseApi } from "../splitwise/api";
 import { useConfirm, useToast } from "../../ui/UIProvider";
 import { tripsApi } from "./api";
 
@@ -42,7 +35,6 @@ export default function InfoTab({
   const toast = useToast();
   const confirm = useConfirm();
   const navigate = useNavigate();
-  const [summary, setSummary] = useState<SplitwiseSummary | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -66,17 +58,6 @@ export default function InfoTab({
     );
     setDestinations(trip.destinations ?? []);
   }, [trip]);
-
-  useEffect(() => {
-    let alive = true;
-    splitwiseApi
-      .summary(group.id)
-      .then((s) => alive && setSummary(s))
-      .catch(() => alive && setSummary(null));
-    return () => {
-      alive = false;
-    };
-  }, [group.id]);
 
   async function onSave(e: FormEvent) {
     e.preventDefault();
@@ -391,11 +372,7 @@ export default function InfoTab({
             placeholder={t("trips.info.budgetPlaceholder")}
           />
         </div>
-        <BudgetWidget
-          trip={trip}
-          summary={summary}
-          currency={group.currency}
-        />
+        <BudgetWidget trip={trip} currency={group.currency} />
       </section>
 
       <div className="flex flex-col-reverse justify-between gap-3 sm:flex-row">
@@ -461,15 +438,7 @@ function MapLinks({ destination }: { destination: TripDestination }) {
   );
 }
 
-function BudgetWidget({
-  trip,
-  summary,
-  currency,
-}: {
-  trip: Trip;
-  summary: SplitwiseSummary | null;
-  currency: string;
-}) {
+function BudgetWidget({ trip, currency }: { trip: Trip; currency: string }) {
   const { t, i18n } = useTranslation();
   if (trip.budget_cents == null) {
     return (
@@ -479,7 +448,10 @@ function BudgetWidget({
     );
   }
 
-  const spentCents = summary ? totalSpendFromSummary(summary) : 0;
+  // `spent_cents` is precomputed on the backend as SUM(expenses.amount_cents)
+  // WHERE trip_id = this trip. Expenses without a trip_id don't contribute,
+  // so the gauge now reflects exactly what the user attributed to this trip.
+  const spentCents = trip.spent_cents;
   const pct =
     trip.budget_cents === 0
       ? 0
@@ -529,26 +501,8 @@ function BudgetWidget({
             })}
       </p>
       <p className="text-[11px] italic text-slate-400 dark:text-slate-500">
-        {t("trips.info.budgetGroupWide")}
+        {t("trips.info.budgetFromAssigned")}
       </p>
     </div>
   );
-}
-
-/**
- * Approximate total group spend from the Splitwise summary: sum all
- * pairwise debts. We deliberately avoid pulling the full expense list so
- * the Info tab stays cheap.
- *
- * NB: this is the whole group's spend, not per-trip. Trips don't carry
- * expenses yet; the note under the widget calls this out to the user.
- */
-function totalSpendFromSummary(summary: SplitwiseSummary): number {
-  const direct: Settlement[] = summary.direct_settlements ?? [];
-  if (direct.length > 0) {
-    return direct.reduce((acc, s) => acc + s.amount_cents, 0);
-  }
-  return summary.balances
-    .filter((b) => b.balance_cents < 0)
-    .reduce((acc, b) => acc + Math.abs(b.balance_cents), 0);
 }

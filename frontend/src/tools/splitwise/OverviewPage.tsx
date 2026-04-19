@@ -481,7 +481,17 @@ function ExpenseItem({
             {t("splitwise.overview.paidBy", { name: e.paid_by_display_name })} -{" "}
             {formatDateTime(e.happened_at)}
           </p>
-          <div className="mt-1.5">{involvementBadge}</div>
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            {involvementBadge}
+            {e.trip_id && e.trip_name && (
+              <span
+                className="inline-flex items-center rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700 ring-1 ring-brand-200/70 dark:bg-brand-900/30 dark:text-brand-200 dark:ring-brand-800/70"
+                title={t("splitwise.overview.forTripTooltip")}
+              >
+                {t("splitwise.overview.forTrip", { name: e.trip_name })}
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex shrink-0 items-start gap-2">
           <span className="tabular-nums font-semibold">

@@ -4,9 +4,10 @@ import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ApiError } from "../../api/client";
 import { groupsApi } from "../../api/groups";
-import type { GroupDetail } from "../../api/types";
+import type { GroupDetail, Trip } from "../../api/types";
 import { useAuth } from "../../context/AuthContext";
 import { formatMoney, parseAmountToCents } from "../../lib/format";
+import { tripsApi } from "../trips/api";
 import { splitwiseApi } from "./api";
 
 type SplitMode = "equal" | "exact";
@@ -35,6 +36,10 @@ export default function SplitwiseNewExpensePage() {
   const [participants, setParticipants] = useState<Set<string>>(new Set());
   const [exactAmounts, setExactAmounts] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [trips, setTrips] = useState<Trip[]>([]);
+  // Empty string = "no trip" (maps to null in payload). Using string state
+  // keeps the native <select> happy since it cannot hold non-string values.
+  const [tripId, setTripId] = useState<string>("");
 
   useEffect(() => {
     if (!groupId) return;
@@ -44,19 +49,23 @@ export default function SplitwiseNewExpensePage() {
     const tasks: [
       ReturnType<typeof groupsApi.get>,
       ReturnType<typeof splitwiseApi.getExpense> | null,
+      ReturnType<typeof tripsApi.listTrips>,
     ] = [
       groupsApi.get(groupId),
       expenseId ? splitwiseApi.getExpense(groupId, expenseId) : null,
+      tripsApi.listTrips(groupId),
     ];
 
     Promise.all(tasks)
-      .then(([g, expense]) => {
+      .then(([g, expense, tripList]) => {
         if (cancelled) return;
         setGroup(g);
+        setTrips(tripList);
         if (expense) {
           setDescription(expense.description);
           setAmountInput(centsToInput(expense.amount_cents));
           setPaidBy(expense.paid_by);
+          setTripId(expense.trip_id ?? "");
           const splitMap: Record<string, string> = {};
           const activeIds = new Set<string>();
           for (const s of expense.splits) {
@@ -149,6 +158,7 @@ export default function SplitwiseNewExpensePage() {
         amount_cents: amountCents,
         paid_by: paidBy,
         splits,
+        trip_id: tripId === "" ? null : tripId,
       };
       if (isEditing && expenseId) {
         await splitwiseApi.updateExpense(groupId, expenseId, payload);
@@ -236,6 +246,30 @@ export default function SplitwiseNewExpensePage() {
               ))}
             </select>
           </div>
+
+          {trips.length > 0 && (
+            <div className="space-y-1 sm:col-span-2">
+              <label className="label" htmlFor="trip_id">
+                {t("splitwise.newExpense.trip")}
+              </label>
+              <select
+                id="trip_id"
+                className="input"
+                value={tripId}
+                onChange={(e) => setTripId(e.target.value)}
+              >
+                <option value="">{t("splitwise.newExpense.tripNone")}</option>
+                {trips.map((tr) => (
+                  <option key={tr.id} value={tr.id}>
+                    {tr.name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {t("splitwise.newExpense.tripHint")}
+              </p>
+            </div>
+          )}
         </div>
 
         <div>

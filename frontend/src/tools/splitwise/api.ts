@@ -7,6 +7,9 @@ export interface ExpenseInput {
   paid_by: string;
   splits: { user_id: string; amount_cents: number }[];
   happened_at?: string;
+  /** Optional trip to attribute this expense to. `null` (or omitted) means
+   *  it's a general group expense that doesn't feed any trip budget. */
+  trip_id?: string | null;
 }
 
 export interface PaymentInput {

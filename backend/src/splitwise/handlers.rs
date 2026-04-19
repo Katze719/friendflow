@@ -65,6 +65,11 @@ pub struct Expense {
     pub amount_cents: i64,
     pub happened_at: DateTime<Utc>,
     pub created_at: DateTime<Utc>,
+    /// Optional link to a trip in the same group. When set, this expense
+    /// contributes to that trip's budget widget. `None` means it's a normal
+    /// group-level expense.
+    pub trip_id: Option<Uuid>,
+    pub trip_name: Option<String>,
     pub splits: Vec<ExpenseSplit>,
 }
 
@@ -99,6 +104,8 @@ pub struct CreateExpenseRequest {
     pub paid_by: Uuid,
     pub happened_at: Option<DateTime<Utc>>,
     pub splits: Vec<SplitInput>,
+    #[serde(default)]
+    pub trip_id: Option<Uuid>,
 }
 
 #[derive(Debug, Deserialize, Validate)]
@@ -110,6 +117,8 @@ pub struct UpdateExpenseRequest {
     pub paid_by: Uuid,
     pub happened_at: Option<DateTime<Utc>>,
     pub splits: Vec<SplitInput>,
+    #[serde(default)]
+    pub trip_id: Option<Uuid>,
 }
 
 #[derive(Debug, Deserialize, Validate)]
@@ -366,11 +375,14 @@ pub async fn list_expenses(
         DateTime<Utc>,
         Uuid,
         String,
+        Option<Uuid>,
+        Option<String>,
     )> = sqlx::query_as(
         "SELECT e.id, e.group_id, e.description, e.amount_cents, e.happened_at, e.created_at,
-                    e.paid_by, u.display_name
+                    e.paid_by, u.display_name, e.trip_id, t.name
              FROM expenses e
              INNER JOIN users u ON u.id = e.paid_by
+             LEFT JOIN trips t ON t.id = e.trip_id
              WHERE e.group_id = $1
              ORDER BY e.happened_at DESC, e.created_at DESC",
     )
@@ -413,6 +425,8 @@ pub async fn list_expenses(
                 created_at,
                 paid_by,
                 paid_by_display_name,
+                trip_id,
+                trip_name,
             )| {
                 Expense {
                     id,
@@ -423,6 +437,8 @@ pub async fn list_expenses(
                     amount_cents,
                     happened_at,
                     created_at,
+                    trip_id,
+                    trip_name,
                     splits: splits_by_expense.remove(&id).unwrap_or_default(),
                 }
             },
@@ -430,6 +446,28 @@ pub async fn list_expenses(
         .collect();
 
     Ok(Json(out))
+}
+
+/// Check that the optional `trip_id` references a trip belonging to the same
+/// group as the expense being created/updated. Nothing to do if no trip was
+/// provided; the caller still has to persist `None`.
+async fn ensure_trip_in_group(
+    state: &AppState,
+    group_id: Uuid,
+    trip_id: Option<Uuid>,
+) -> AppResult<()> {
+    let Some(trip_id) = trip_id else { return Ok(()) };
+    let row: Option<(Uuid,)> = sqlx::query_as("SELECT group_id FROM trips WHERE id = $1")
+        .bind(trip_id)
+        .fetch_optional(&state.db)
+        .await?;
+    let row = row.ok_or_else(|| AppError::NotFound("trip not found".into()))?;
+    if row.0 != group_id {
+        return Err(AppError::BadRequest(
+            "trip does not belong to this group".into(),
+        ));
+    }
+    Ok(())
 }
 
 /// Shared validation for create/update: splits must be non-empty, sum up to
@@ -486,11 +524,14 @@ async fn load_expense(state: &AppState, expense_id: Uuid) -> AppResult<Expense> 
         DateTime<Utc>,
         Uuid,
         String,
+        Option<Uuid>,
+        Option<String>,
     ) = sqlx::query_as(
         "SELECT e.id, e.group_id, e.description, e.amount_cents, e.happened_at, e.created_at,
-                e.paid_by, u.display_name
+                e.paid_by, u.display_name, e.trip_id, t.name
          FROM expenses e
          INNER JOIN users u ON u.id = e.paid_by
+         LEFT JOIN trips t ON t.id = e.trip_id
          WHERE e.id = $1",
     )
     .bind(expense_id)
@@ -525,6 +566,8 @@ async fn load_expense(state: &AppState, expense_id: Uuid) -> AppResult<Expense> 
         amount_cents: row.3,
         happened_at: row.4,
         created_at: row.5,
+        trip_id: row.8,
+        trip_name: row.9,
         splits,
     })
 }
@@ -558,13 +601,14 @@ pub async fn create_expense(
         &payload.splits,
     )
     .await?;
+    ensure_trip_in_group(&state, group_id, payload.trip_id).await?;
 
     let happened_at = payload.happened_at.unwrap_or_else(Utc::now);
 
     let mut tx = state.db.begin().await?;
     let exp_id: (Uuid,) = sqlx::query_as(
-        "INSERT INTO expenses (group_id, paid_by, description, amount_cents, happened_at, created_by)
-         VALUES ($1, $2, $3, $4, $5, $6)
+        "INSERT INTO expenses (group_id, paid_by, description, amount_cents, happened_at, created_by, trip_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
          RETURNING id",
     )
     .bind(group_id)
@@ -573,6 +617,7 @@ pub async fn create_expense(
     .bind(payload.amount_cents)
     .bind(happened_at)
     .bind(user.id)
+    .bind(payload.trip_id)
     .fetch_one(&mut *tx)
     .await?;
 
@@ -609,6 +654,7 @@ pub async fn update_expense(
         &payload.splits,
     )
     .await?;
+    ensure_trip_in_group(&state, group_id, payload.trip_id).await?;
 
     // Make sure the expense actually belongs to this group.
     let existing: Option<(Uuid,)> = sqlx::query_as("SELECT group_id FROM expenses WHERE id = $1")
@@ -628,7 +674,8 @@ pub async fn update_expense(
          SET paid_by = $2,
              description = $3,
              amount_cents = $4,
-             happened_at = $5
+             happened_at = $5,
+             trip_id = $7
          WHERE id = $1 AND group_id = $6",
     )
     .bind(expense_id)
@@ -637,6 +684,7 @@ pub async fn update_expense(
     .bind(payload.amount_cents)
     .bind(happened_at)
     .bind(group_id)
+    .bind(payload.trip_id)
     .execute(&mut *tx)
     .await?;
 

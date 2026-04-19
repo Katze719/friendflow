@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import CalendarOverviewPage from "./calendar/OverviewPage";
+import ShoppingListsPage from "./shopping/ListsPage";
 import ShoppingOverviewPage from "./shopping/OverviewPage";
 import SplitwiseOverviewPage from "./splitwise/OverviewPage";
 import SplitwiseNewExpensePage from "./splitwise/NewExpensePage";
@@ -78,7 +79,10 @@ export const tools: Tool[] = [
     basePath: "shopping",
     icon: ShoppingBasket,
     accent: "bg-amber-500",
-    routes: [{ path: "/", component: ShoppingOverviewPage }],
+    routes: [
+      { path: "/", component: ShoppingListsPage },
+      { path: "/:listId", component: ShoppingOverviewPage },
+    ],
   },
   {
     id: "tasks",

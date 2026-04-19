@@ -102,6 +102,18 @@ pub async fn create(
     .execute(&mut *tx)
     .await?;
 
+    // Seed a default shopping list. The UI is list-centric and would show
+    // an empty state (with a "+ New list" prompt) for a fresh group
+    // otherwise; having one ready means day-one usage is frictionless.
+    sqlx::query(
+        "INSERT INTO shopping_lists (group_id, name, created_by)
+         VALUES ($1, 'Einkaufsliste', $2)",
+    )
+    .bind(row.0)
+    .bind(user.id)
+    .execute(&mut *tx)
+    .await?;
+
     tx.commit().await?;
 
     Ok(Json(GroupSummary {
