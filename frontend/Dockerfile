@@ -11,6 +11,12 @@ COPY . .
 ARG VITE_API_URL=
 ENV VITE_API_URL=${VITE_API_URL}
 
+# Controls what unauthenticated visitors see at "/". See docker-compose for
+# accepted values ("login" or "landing"). Defaults to "login" to preserve
+# the original behaviour for existing deployments.
+ARG VITE_LANDING_MODE=login
+ENV VITE_LANDING_MODE=${VITE_LANDING_MODE}
+
 RUN npm run build
 
 # --- serve ---

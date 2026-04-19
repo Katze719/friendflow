@@ -43,6 +43,138 @@ const de: Translations = {
     title: "Nicht gefunden",
     subtitle: "Diese Seite gibt es nicht.",
   },
+  landing: {
+    nav: {
+      signIn: "Anmelden",
+      signUp: "Loslegen",
+    },
+    hero: {
+      eyebrow: "Gemeinsam planen, selbst gehostet",
+      title: "Ein ruhiger Ort für deine Crew.",
+      subtitle:
+        "friendflow bündelt Reiseplanung, geteilte Ausgaben, einen Gruppenkalender und Einkaufslisten in einer App, die du selbst hostest. Kein Tracking, keine Werbung - nur Tools, die du und deine Leute wirklich nutzt.",
+      ctaPrimary: "Kostenloses Konto anlegen",
+      ctaSecondary: "Ich habe schon ein Konto",
+      bullet1: "Unbegrenzt Gruppen, Reisen und Ausgaben",
+      bullet2: "Funktioniert als App auf deinem Handy",
+      bullet3: "Deine Daten bleiben auf deinem Server",
+      bullet4: "Deutsch & Englisch von Haus aus",
+    },
+    mock: {
+      trip: {
+        title: "Wochenende Lissabon",
+        subtitle: "7. - 10. Juni - 5 Personen",
+      },
+      split: {
+        title: "Dinner @ Time Out Market",
+        subtitle: "Anna bezahlt - 4 Anteile",
+      },
+      calendar: {
+        title: "Abholung vom Flughafen",
+        subtitle: "Fr 16:40 - Tom",
+      },
+      shopping: {
+        title: "WG-Einkauf",
+        subtitle: "6 offene Punkte",
+      },
+    },
+    trust: {
+      privacy: "Privatsphäre zuerst",
+      selfHosted: "Selbst gehostet",
+      pwa: "Als App installierbar",
+      multiLang: "DE & EN",
+    },
+    features: {
+      eyebrow: "Was du bekommst",
+      title: "Vier Tools, die zusammenspielen.",
+      subtitle:
+        "Jedes Feature lebt innerhalb einer Gruppe - dieselben Leute, mit denen du die Rechnung teilst, sehen auch den Reiseplan, den geteilten Kalender und die Einkaufsliste.",
+      splitwise: {
+        title: "Geteilte Ausgaben",
+        body: "Halte fest, wer was bezahlt hat, teile ungleich auf und rechne mit einem Tipp ab. Multi-Währung und pro Gruppe einstellbar.",
+      },
+      trips: {
+        title: "Reiseplanung",
+        body: "Mehrere Reisen pro Gruppe planen. Links sammeln, Tag für Tag einen Plan bauen, gemeinsame Packliste führen und alles im Kalender sehen.",
+      },
+      calendar: {
+        title: "Gruppenkalender",
+        body: "Monats- und Agenda-Ansicht, für alle in der Gruppe. Termine aus Reiseplänen tauchen automatisch hier auf.",
+      },
+      shopping: {
+        title: "Einkaufslisten",
+        body: "Listen für die WG oder den nächsten Trip in Echtzeit. Abhaken, ohne quer durch die Küche zu rufen.",
+      },
+    },
+    how: {
+      eyebrow: "So läuft's",
+      title: "Drei Schritte, dann vergisst du es.",
+      subtitle:
+        "friendflow drängt sich nicht auf: schnell eingerichtet, schnell eingeladen, schnell im Alltag benutzt.",
+      step1: {
+        title: "Gruppe anlegen",
+        body: "Eine Gruppe ist ein Freundeskreis - WG, Crew oder Trip. Name, Währung, fertig.",
+      },
+      step2: {
+        title: "Leute einladen",
+        body: "Per Code, Link oder QR teilen. Keine E-Mail-Kaskaden, kein Spam.",
+      },
+      step3: {
+        title: "Tools öffnen",
+        body: "Wähl, was ihr braucht - Ausgaben, Reisen, Kalender, Einkauf. Der Rest bleibt aus dem Weg.",
+      },
+    },
+    values: {
+      eyebrow: "Warum selbst hosten",
+      title: "Auf Dauer angelegt.",
+      subtitle:
+        "friendflow ist ehrliche, offene Software. Keine Konten, die du nicht löschen kannst, kein Analytics, das jeden Tap mitliest.",
+      privacy: {
+        title: "Deine Daten, deine Regeln",
+        body: "Es gibt keine zentrale SaaS. Die Instanz, auf der du dich anmeldest, ist die, der du vertraust.",
+      },
+      selfHosted: {
+        title: "Läuft überall",
+        body: "Zwei Container per docker-compose. Ein kleiner VPS reicht für eine Freundesgruppe locker.",
+      },
+      pwa: {
+        title: "Fit für den Home-Screen",
+        body: "Installiert sich als App auf iOS und Android. Fühlt sich nativ an, aktualisiert sich selbst.",
+      },
+      open: {
+        title: "Kein Lock-in",
+        body: "Ganz normales Postgres darunter - deine Daten gehören dir, exportierbar und einsehbar.",
+      },
+    },
+    faq: {
+      eyebrow: "FAQ",
+      title: "Fragen, kurz beantwortet.",
+      subtitle: "Noch was offen? Frag die Person, die diese Instanz betreibt.",
+      cost: {
+        q: "Was kostet das?",
+        a: "friendflow selbst ist kostenlos. Du zahlst nur den kleinen Server, auf dem es läuft - oft ein paar Euro pro Monat.",
+      },
+      data: {
+        q: "Wo werden meine Daten gespeichert?",
+        a: "Genau auf dem Server, dessen URL du gerade aufgerufen hast. Nichts geht an Dritte.",
+      },
+      mobile: {
+        q: "Gibt es eine mobile App?",
+        a: "Ja - die Website installiert sich auf iOS und Android als Progressive Web App. Kein App-Store nötig.",
+      },
+      invite: {
+        q: "Brauchen meine Freunde ein Konto?",
+        a: "Sie melden sich mit E-Mail und Passwort auf dieser Instanz an. Alle bleiben innerhalb der Gruppe, die du teilst.",
+      },
+    },
+    finalCta: {
+      title: "Lust, fünf Chat-Apps loszuwerden?",
+      subtitle:
+        "Leg eine Gruppe an, lad deine Crew ein und halte den nächsten Trip, das Dinner und WG-Entscheidungen an einem ruhigen Ort.",
+      ctaPrimary: "Konto anlegen",
+      ctaSecondary: "Anmelden",
+    },
+  },
   auth: {
     login: {
       title: "Anmelden",

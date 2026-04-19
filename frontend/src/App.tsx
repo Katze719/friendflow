@@ -1,11 +1,14 @@
 import { useTranslation } from "react-i18next";
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
+import { useAuth } from "./context/AuthContext";
+import { isLandingModeEnabled } from "./lib/landingMode";
 import AdminUsers from "./pages/AdminUsers";
 import Dashboard from "./pages/Dashboard";
 import GroupHome from "./pages/GroupHome";
 import Invite from "./pages/Invite";
+import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import PendingApproval from "./pages/PendingApproval";
 import Register from "./pages/Register";
@@ -18,13 +21,17 @@ export default function App() {
       <Route path="/register" element={<Register />} />
       <Route path="/pending" element={<PendingApproval />} />
       <Route path="/i/:code" element={<Invite />} />
+      {/* Root is special: authenticated users get the Dashboard, everyone
+          else either sees the public landing page or gets bounced to
+          /login depending on VITE_LANDING_MODE. Declared BEFORE the
+          catch-all so the exact match wins. */}
+      <Route path="/" element={<RootGate />} />
       <Route
         path="/*"
         element={
           <ProtectedRoute>
             <Layout>
               <Routes>
-                <Route path="/" element={<Dashboard />} />
                 <Route path="/groups/:groupId" element={<GroupHome />} />
                 {tools.map((tool) =>
                   tool.routes.map((route) => {
@@ -50,6 +57,31 @@ export default function App() {
       />
     </Routes>
   );
+}
+
+function RootGate() {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+  const { t } = useTranslation();
+
+  if (loading) {
+    return (
+      <div className="flex h-full items-center justify-center p-12 text-slate-500">
+        {t("common.loading")}
+      </div>
+    );
+  }
+  if (user) {
+    return (
+      <Layout>
+        <Dashboard />
+      </Layout>
+    );
+  }
+  if (isLandingModeEnabled()) {
+    return <Landing />;
+  }
+  return <Navigate to="/login" state={{ from: location }} replace />;
 }
 
 function NotFound() {

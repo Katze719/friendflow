@@ -42,6 +42,12 @@ services:
       context: ./frontend
       args:
         VITE_API_URL: ${VITE_API_URL:-}
+        # "login"   -> unauthenticated visitors are sent straight to the
+        #              sign-in form (default, good for private instances).
+        # "landing" -> unauthenticated visitors see a public marketing
+        #              page that explains what friendflow is, with
+        #              sign-in / sign-up buttons in the top right.
+        VITE_LANDING_MODE: ${LANDING_MODE:-login}
     restart: unless-stopped
     depends_on:
       - backend
