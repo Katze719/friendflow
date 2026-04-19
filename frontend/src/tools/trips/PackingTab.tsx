@@ -1,8 +1,10 @@
 import {
   Backpack,
+  Check,
   GripVertical,
   Pencil,
   Plus,
+  Sparkles,
   Trash2,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
@@ -12,6 +14,124 @@ import type { GroupDetail, Trip, TripPackingItem } from "../../api/types";
 import { useConfirm, useToast } from "../../ui/UIProvider";
 import HelpBanner from "../../components/HelpBanner";
 import { tripsApi } from "./api";
+
+/**
+ * Curated list of "usual suspects" for a packing list. Each entry references
+ * i18n keys under `trips.packing.catalog.categories` and
+ * `trips.packing.catalog.items`, so the labels stay translatable without
+ * bloating the UI code.
+ */
+const PACKING_CATALOG: { category: string; items: string[] }[] = [
+  {
+    category: "documents",
+    items: [
+      "passport",
+      "idCard",
+      "drivingLicense",
+      "insuranceCard",
+      "vaccinationRecord",
+      "tickets",
+      "bookingConfirmations",
+      "cash",
+      "creditCard",
+      "emergencyContacts",
+    ],
+  },
+  {
+    category: "electronics",
+    items: [
+      "phoneCharger",
+      "chargingCable",
+      "powerbank",
+      "headphones",
+      "travelAdapter",
+      "camera",
+      "laptop",
+      "laptopCharger",
+      "ereader",
+    ],
+  },
+  {
+    category: "toiletries",
+    items: [
+      "toothbrush",
+      "toothpaste",
+      "shampoo",
+      "showerGel",
+      "deodorant",
+      "razor",
+      "towel",
+      "brush",
+      "sunscreen",
+      "periodProducts",
+      "contactLenses",
+      "toiletryBag",
+    ],
+  },
+  {
+    category: "health",
+    items: [
+      "painkillers",
+      "plasters",
+      "personalMeds",
+      "insectRepellent",
+      "handSanitiser",
+    ],
+  },
+  {
+    category: "clothing",
+    items: [
+      "socks",
+      "underwear",
+      "tshirts",
+      "trousers",
+      "sweater",
+      "rainJacket",
+      "pyjamas",
+      "sneakers",
+    ],
+  },
+  {
+    category: "outdoor",
+    items: [
+      "flashlight",
+      "pocketKnife",
+      "waterBottle",
+      "lighter",
+      "trashBags",
+    ],
+  },
+  {
+    category: "beach",
+    items: [
+      "swimwear",
+      "flipflops",
+      "beachTowel",
+      "sunglasses",
+      "hat",
+    ],
+  },
+  {
+    category: "winter",
+    items: [
+      "winterJacket",
+      "gloves",
+      "scarf",
+      "beanie",
+      "thermalLayer",
+    ],
+  },
+  {
+    category: "misc",
+    items: [
+      "sleepMask",
+      "earplugs",
+      "reusableBag",
+      "book",
+      "snacks",
+    ],
+  },
+];
 
 /**
  * Simple reorderable checklist. Categories are free-text (optional) so users
@@ -29,6 +149,7 @@ export default function PackingTab({
   const toast = useToast();
   const [items, setItems] = useState<TripPackingItem[] | null>(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [showCatalog, setShowCatalog] = useState(false);
 
   const reload = useCallback(() => {
     tripsApi
@@ -91,10 +212,23 @@ export default function PackingTab({
             </p>
           )}
         </div>
-        <button className="btn-primary" onClick={() => setShowAdd((v) => !v)}>
-          <Plus className="h-4 w-4" />
-          {t("trips.packing.add")}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={() => setShowCatalog((v) => !v)}
+            aria-expanded={showCatalog}
+          >
+            <Sparkles className="h-4 w-4" />
+            {showCatalog
+              ? t("trips.packing.catalog.close")
+              : t("trips.packing.catalog.open")}
+          </button>
+          <button className="btn-primary" onClick={() => setShowAdd((v) => !v)}>
+            <Plus className="h-4 w-4" />
+            {t("trips.packing.add")}
+          </button>
+        </div>
       </div>
 
       {progress && (
@@ -110,10 +244,22 @@ export default function PackingTab({
         <AddPackingForm
           group={group}
           trip={trip}
+          existing={items}
           onDone={(created) => {
             setShowAdd(false);
             if (created) reload();
           }}
+        />
+      )}
+
+      {showCatalog && (
+        <PackingCatalog
+          group={group}
+          trip={trip}
+          existing={items}
+          onAdded={(item) =>
+            setItems((prev) => (prev ? [...prev, item] : [item]))
+          }
         />
       )}
 
@@ -460,10 +606,12 @@ function EditPackingInline({
 function AddPackingForm({
   group,
   trip,
+  existing,
   onDone,
 }: {
   group: GroupDetail;
   trip: Trip;
+  existing: TripPackingItem[];
   onDone: (created: boolean) => void;
 }) {
   const { t } = useTranslation();
@@ -473,6 +621,75 @@ function AddPackingForm({
   const [category, setCategory] = useState("");
   const [assignee, setAssignee] = useState("");
   const [saving, setSaving] = useState(false);
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [highlight, setHighlight] = useState(0);
+  const categoryTouched = useRef(false);
+
+  // Build a flat, translated suggestion list once per render of the form and
+  // strip items that are already on the packing list (case-insensitive).
+  const existingNames = useMemo(() => {
+    const set = new Set<string>();
+    for (const item of existing) {
+      set.add(item.name.trim().toLowerCase());
+    }
+    return set;
+  }, [existing]);
+
+  const catalogFlat = useMemo(() => {
+    const out: { name: string; category: string }[] = [];
+    for (const entry of PACKING_CATALOG) {
+      const categoryLabel = t(
+        `trips.packing.catalog.categories.${entry.category}`,
+      );
+      for (const itemKey of entry.items) {
+        const label = t(`trips.packing.catalog.items.${itemKey}`);
+        out.push({ name: label, category: categoryLabel });
+      }
+    }
+    return out;
+  }, [t]);
+
+  const query = name.trim().toLowerCase();
+  const suggestions = useMemo(() => {
+    if (!query) return [];
+    return catalogFlat
+      .filter(
+        (entry) =>
+          !existingNames.has(entry.name.toLowerCase()) &&
+          entry.name.toLowerCase().includes(query),
+      )
+      .slice(0, 8);
+  }, [query, catalogFlat, existingNames]);
+
+  function applySuggestion(entry: { name: string; category: string }) {
+    setName(entry.name);
+    if (!categoryTouched.current || !category.trim()) {
+      setCategory(entry.category);
+    }
+    setSuggestOpen(false);
+    setHighlight(0);
+  }
+
+  function onNameKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (!suggestOpen || suggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlight((h) => (h + 1) % suggestions.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlight(
+        (h) => (h - 1 + suggestions.length) % suggestions.length,
+      );
+    } else if (e.key === "Enter") {
+      const picked = suggestions[highlight];
+      if (picked) {
+        e.preventDefault();
+        applySuggestion(picked);
+      }
+    } else if (e.key === "Escape") {
+      setSuggestOpen(false);
+    }
+  }
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -496,15 +713,63 @@ function AddPackingForm({
 
   return (
     <form onSubmit={submit} className="card grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_100px_140px_160px_auto]">
-      <input
-        className="input"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        maxLength={200}
-        placeholder={t("trips.packing.namePlaceholder")}
-        required
-        autoFocus
-      />
+      <div className="relative">
+        <input
+          className="input w-full"
+          value={name}
+          onChange={(e) => {
+            setName(e.target.value);
+            setSuggestOpen(true);
+            setHighlight(0);
+          }}
+          onFocus={() => setSuggestOpen(true)}
+          onBlur={() => {
+            // Delay so a click on a suggestion can still register.
+            window.setTimeout(() => setSuggestOpen(false), 120);
+          }}
+          onKeyDown={onNameKeyDown}
+          maxLength={200}
+          placeholder={t("trips.packing.namePlaceholder")}
+          required
+          autoFocus
+          autoComplete="off"
+          role="combobox"
+          aria-expanded={suggestOpen && suggestions.length > 0}
+          aria-autocomplete="list"
+          aria-controls="packing-suggestions"
+        />
+        {suggestOpen && suggestions.length > 0 && (
+          <ul
+            id="packing-suggestions"
+            role="listbox"
+            className="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-auto rounded-md border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-900"
+          >
+            {suggestions.map((entry, idx) => (
+              <li key={`${entry.category}:${entry.name}`} role="option" aria-selected={idx === highlight}>
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    // Prevent blur firing before click.
+                    e.preventDefault();
+                    applySuggestion(entry);
+                  }}
+                  onMouseEnter={() => setHighlight(idx)}
+                  className={`flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm ${
+                    idx === highlight
+                      ? "bg-brand-50 text-brand-800 dark:bg-brand-900/30 dark:text-brand-100"
+                      : "text-slate-700 dark:text-slate-200"
+                  }`}
+                >
+                  <span className="truncate">{entry.name}</span>
+                  <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500">
+                    {entry.category}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
       <input
         className="input"
         value={quantity}
@@ -515,7 +780,10 @@ function AddPackingForm({
       <input
         className="input"
         value={category}
-        onChange={(e) => setCategory(e.target.value)}
+        onChange={(e) => {
+          categoryTouched.current = true;
+          setCategory(e.target.value);
+        }}
         maxLength={80}
         placeholder={t("trips.packing.categoryPlaceholder")}
       />
@@ -544,5 +812,123 @@ function AddPackingForm({
         </button>
       </div>
     </form>
+  );
+}
+
+function PackingCatalog({
+  group,
+  trip,
+  existing,
+  onAdded,
+}: {
+  group: GroupDetail;
+  trip: Trip;
+  existing: TripPackingItem[] | null;
+  onAdded: (item: TripPackingItem) => void;
+}) {
+  const { t } = useTranslation();
+  const toast = useToast();
+  // Per-item busy flag so double-clicks don't create duplicates.
+  const [busy, setBusy] = useState<Record<string, boolean>>({});
+
+  const existingNames = useMemo(() => {
+    const set = new Set<string>();
+    for (const item of existing ?? []) {
+      set.add(item.name.trim().toLowerCase());
+    }
+    return set;
+  }, [existing]);
+
+  async function addItem(itemKey: string, categoryKey: string) {
+    const name = t(`trips.packing.catalog.items.${itemKey}`);
+    const category = t(`trips.packing.catalog.categories.${categoryKey}`);
+    const key = `${categoryKey}:${itemKey}`;
+    if (busy[key]) return;
+    if (existingNames.has(name.trim().toLowerCase())) return;
+
+    setBusy((prev) => ({ ...prev, [key]: true }));
+    try {
+      const created = await tripsApi.createPacking(group.id, trip.id, {
+        name,
+        category,
+      });
+      onAdded(created);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : t("common.error"));
+    } finally {
+      setBusy((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    }
+  }
+
+  return (
+    <section
+      className="card space-y-4 p-4"
+      aria-label={t("trips.packing.catalog.title")}
+    >
+      <div>
+        <h3 className="text-sm font-semibold">
+          {t("trips.packing.catalog.title")}
+        </h3>
+        <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+          {t("trips.packing.catalog.hint")}
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        {PACKING_CATALOG.map(({ category, items }) => (
+          <div key={category}>
+            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              {t(`trips.packing.catalog.categories.${category}`)}
+            </h4>
+            <div className="flex flex-wrap gap-2">
+              {items.map((itemKey) => {
+                const label = t(`trips.packing.catalog.items.${itemKey}`);
+                const alreadyAdded = existingNames.has(
+                  label.trim().toLowerCase(),
+                );
+                const key = `${category}:${itemKey}`;
+                const isBusy = !!busy[key];
+                return (
+                  <button
+                    key={itemKey}
+                    type="button"
+                    onClick={() => addItem(itemKey, category)}
+                    disabled={alreadyAdded || isBusy}
+                    title={
+                      alreadyAdded
+                        ? t("trips.packing.catalog.alreadyAdded")
+                        : label
+                    }
+                    aria-label={
+                      alreadyAdded
+                        ? `${label} - ${t("trips.packing.catalog.alreadyAdded")}`
+                        : label
+                    }
+                    className={
+                      alreadyAdded
+                        ? "inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500"
+                        : "inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700 transition hover:border-brand-400 hover:bg-brand-50 hover:text-brand-700 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-brand-500 dark:hover:bg-brand-900/30 dark:hover:text-brand-200"
+                    }
+                  >
+                    {alreadyAdded ? (
+                      <Check className="h-3 w-3" aria-hidden />
+                    ) : (
+                      <Plus className="h-3 w-3" aria-hidden />
+                    )}
+                    <span className={alreadyAdded ? "line-through" : ""}>
+                      {label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }

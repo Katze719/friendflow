@@ -22,6 +22,92 @@ import type { GroupDetail, ShoppingItem } from "../../api/types";
 import { useConfirm, useToast } from "../../ui/UIProvider";
 import { shoppingApi } from "./api";
 
+/**
+ * Curated list of common grocery items for the "type-to-search" suggestions in
+ * the add form. The category is only a visual hint in the dropdown - the
+ * shopping backend does not store categories.
+ */
+const SHOPPING_CATALOG: { category: string; items: string[] }[] = [
+  {
+    category: "dairy",
+    items: ["milk", "butter", "cheese", "yoghurt", "cream", "quark", "eggs"],
+  },
+  {
+    category: "bakery",
+    items: ["bread", "rolls", "toast", "flour", "sugar", "yeast"],
+  },
+  {
+    category: "fruitVeg",
+    items: [
+      "tomatoes",
+      "onions",
+      "potatoes",
+      "carrots",
+      "cucumber",
+      "pepper",
+      "salad",
+      "garlic",
+      "avocado",
+      "mushrooms",
+      "apples",
+      "bananas",
+      "oranges",
+      "lemons",
+      "grapes",
+      "berries",
+    ],
+  },
+  {
+    category: "meatFish",
+    items: ["chicken", "mincedMeat", "ham", "salmon", "tuna", "tofu"],
+  },
+  {
+    category: "pantry",
+    items: [
+      "pasta",
+      "rice",
+      "tomatoSauce",
+      "oliveOil",
+      "vinegar",
+      "salt",
+      "blackPepper",
+      "spices",
+      "cereals",
+      "oats",
+      "peanutButter",
+      "jam",
+      "honey",
+    ],
+  },
+  {
+    category: "frozen",
+    items: ["frozenVeg", "frozenPizza", "icecream"],
+  },
+  {
+    category: "drinks",
+    items: ["water", "coffee", "tea", "juice", "plantMilk", "beer", "wine"],
+  },
+  {
+    category: "snacks",
+    items: ["chocolate", "chips", "cookies", "nuts"],
+  },
+  {
+    category: "household",
+    items: [
+      "toiletPaper",
+      "kitchenRoll",
+      "dishSoap",
+      "laundryDetergent",
+      "trashBags",
+      "spongesCloths",
+    ],
+  },
+  {
+    category: "hygiene",
+    items: ["toothpaste", "shampoo", "showerGel", "soap", "deodorant"],
+  },
+];
+
 export default function ShoppingOverviewPage() {
   const { t } = useTranslation();
   const { groupId } = useParams<{ groupId: string }>();
@@ -121,7 +207,7 @@ export default function ShoppingOverviewPage() {
         </div>
       </div>
 
-      <AddItemForm groupId={group.id} onAdded={prependItem} />
+      <AddItemForm groupId={group.id} existing={items} onAdded={prependItem} />
 
       {items.length === 0 ? (
         <div className="card p-8 text-center">
@@ -195,9 +281,11 @@ export default function ShoppingOverviewPage() {
 
 function AddItemForm({
   groupId,
+  existing,
   onAdded,
 }: {
   groupId: string;
+  existing: ShoppingItem[];
   onAdded: (item: ShoppingItem) => void;
 }) {
   const { t } = useTranslation();
@@ -205,6 +293,74 @@ function AddItemForm({
   const [quantity, setQuantity] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [highlight, setHighlight] = useState(0);
+
+  // Only filter out items that are still open; completed items should be
+  // reopenable via the suggestions (otherwise you couldn't quickly re-add
+  // "milk" next week just because a checked-off entry still lingers).
+  const existingOpenNames = useMemo(() => {
+    const set = new Set<string>();
+    for (const item of existing) {
+      if (!item.is_done) set.add(item.name.trim().toLowerCase());
+    }
+    return set;
+  }, [existing]);
+
+  const catalogFlat = useMemo(() => {
+    const out: { name: string; category: string }[] = [];
+    for (const entry of SHOPPING_CATALOG) {
+      const categoryLabel = t(
+        `shopping.overview.catalog.categories.${entry.category}`,
+      );
+      for (const itemKey of entry.items) {
+        out.push({
+          name: t(`shopping.overview.catalog.items.${itemKey}`),
+          category: categoryLabel,
+        });
+      }
+    }
+    return out;
+  }, [t]);
+
+  const query = name.trim().toLowerCase();
+  const suggestions = useMemo(() => {
+    if (!query) return [];
+    return catalogFlat
+      .filter(
+        (entry) =>
+          !existingOpenNames.has(entry.name.toLowerCase()) &&
+          entry.name.toLowerCase().includes(query),
+      )
+      .slice(0, 8);
+  }, [query, catalogFlat, existingOpenNames]);
+
+  function applySuggestion(entry: { name: string; category: string }) {
+    setName(entry.name);
+    setSuggestOpen(false);
+    setHighlight(0);
+  }
+
+  function onNameKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (!suggestOpen || suggestions.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlight((h) => (h + 1) % suggestions.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlight(
+        (h) => (h - 1 + suggestions.length) % suggestions.length,
+      );
+    } else if (e.key === "Enter") {
+      const picked = suggestions[highlight];
+      if (picked) {
+        e.preventDefault();
+        applySuggestion(picked);
+      }
+    } else if (e.key === "Escape") {
+      setSuggestOpen(false);
+    }
+  }
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -236,15 +392,66 @@ function AddItemForm({
         <label className="label" htmlFor="item_name">
           {t("shopping.overview.item")}
         </label>
-        <input
-          id="item_name"
-          className="input"
-          placeholder={t("shopping.overview.itemPlaceholder")}
-          required
-          maxLength={200}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
+        <div className="relative">
+          <input
+            id="item_name"
+            className="input w-full"
+            placeholder={t("shopping.overview.itemPlaceholder")}
+            required
+            maxLength={200}
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+              setSuggestOpen(true);
+              setHighlight(0);
+            }}
+            onFocus={() => setSuggestOpen(true)}
+            onBlur={() => {
+              // Delay so a click on a suggestion can still register.
+              window.setTimeout(() => setSuggestOpen(false), 120);
+            }}
+            onKeyDown={onNameKeyDown}
+            autoComplete="off"
+            role="combobox"
+            aria-expanded={suggestOpen && suggestions.length > 0}
+            aria-autocomplete="list"
+            aria-controls="shopping-suggestions"
+          />
+          {suggestOpen && suggestions.length > 0 && (
+            <ul
+              id="shopping-suggestions"
+              role="listbox"
+              className="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-auto rounded-md border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-900"
+            >
+              {suggestions.map((entry, idx) => (
+                <li
+                  key={`${entry.category}:${entry.name}`}
+                  role="option"
+                  aria-selected={idx === highlight}
+                >
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      applySuggestion(entry);
+                    }}
+                    onMouseEnter={() => setHighlight(idx)}
+                    className={`flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm ${
+                      idx === highlight
+                        ? "bg-brand-50 text-brand-800 dark:bg-brand-900/30 dark:text-brand-100"
+                        : "text-slate-700 dark:text-slate-200"
+                    }`}
+                  >
+                    <span className="truncate">{entry.name}</span>
+                    <span className="shrink-0 text-xs text-slate-400 dark:text-slate-500">
+                      {entry.category}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
       <div className="space-y-1 sm:w-32">
         <label className="label" htmlFor="item_qty">
