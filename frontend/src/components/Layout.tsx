@@ -1,7 +1,7 @@
-import { LogOut, Shield } from "lucide-react";
+import { Home, LogOut, Shield } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { adminApi } from "../api/admin";
 import { useAuth } from "../context/AuthContext";
 import HeaderMenu from "./HeaderMenu";
@@ -14,9 +14,13 @@ const PENDING_POLL_MS = 60_000;
 export default function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTranslation();
   const isAdmin = !!user?.is_admin;
   const [pendingCount, setPendingCount] = useState(0);
+  // Hide the shortcut on the dashboard itself - otherwise the primary
+  // CTA would just take you to the page you're already on.
+  const onDashboard = location.pathname === "/";
 
   useEffect(() => {
     if (!isAdmin) {
@@ -54,19 +58,34 @@ export default function Layout({ children }: { children: ReactNode }) {
     <div className="min-h-full flex flex-col">
       <header className="sticky top-0 z-20 border-b border-slate-200/70 bg-white/80 backdrop-blur pt-safe dark:border-slate-800/70 dark:bg-slate-950/70">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-safe py-3">
-          <Link
-            to="/"
-            className="flex min-w-0 items-center gap-2 font-semibold text-slate-900 dark:text-slate-100"
-          >
-            <img
-              src="/favicon-192.png"
-              alt=""
-              width={32}
-              height={32}
-              className="h-8 w-8 shrink-0 rounded-lg"
-            />
-            <span className="truncate">friendflow</span>
-          </Link>
+          <div className="flex min-w-0 items-center gap-2">
+            <Link
+              to="/"
+              className="flex min-w-0 items-center gap-2 font-semibold text-slate-900 dark:text-slate-100"
+            >
+              <img
+                src="/favicon-192.png"
+                alt=""
+                width={32}
+                height={32}
+                className="h-8 w-8 shrink-0 rounded-lg"
+              />
+              <span className="truncate">friendflow</span>
+            </Link>
+            {user && !onDashboard && (
+              <Link
+                to="/"
+                className="btn-primary ml-1 shrink-0"
+                aria-label={t("layout.dashboard")}
+                title={t("layout.dashboard")}
+              >
+                <Home className="h-4 w-4" />
+                <span className="hidden sm:inline">
+                  {t("layout.dashboard")}
+                </span>
+              </Link>
+            )}
+          </div>
           <div className="flex items-center gap-1 sm:gap-3">
             <InstallAppButton variant="ghost" />
             <div className="hidden items-center gap-3 sm:flex">

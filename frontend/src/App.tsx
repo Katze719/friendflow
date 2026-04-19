@@ -11,6 +11,7 @@ import Invite from "./pages/Invite";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import PendingApproval from "./pages/PendingApproval";
+import PersonalCalendar from "./pages/PersonalCalendar";
 import Register from "./pages/Register";
 import { tools } from "./tools";
 
@@ -48,6 +49,7 @@ export default function App() {
                     );
                   }),
                 )}
+                <Route path="/me/calendar" element={<PersonalCalendar />} />
                 <Route path="/admin/users" element={<AdminUsers />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>

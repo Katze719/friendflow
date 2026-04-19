@@ -65,6 +65,7 @@ async fn serve(cfg: config::Config) -> anyhow::Result<()> {
         .nest("/api/auth", auth::routes())
         .nest("/api/admin", admin::routes())
         .nest("/api/groups", groups::routes())
+        .nest("/api/me/calendar", calendar::personal_routes())
         .with_state(state)
         .layer(CompressionLayer::new())
         .layer(TraceLayer::new_for_http())

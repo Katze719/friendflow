@@ -210,17 +210,33 @@ export interface TripItineraryItem {
 
 export interface CalendarEvent {
   id: string;
-  group_id: string;
+  /** Present only for group-owned events. */
+  group_id: string | null;
+  /** Present only for personal events. */
+  owner_user_id: string | null;
   title: string;
   description: string;
   location: string;
   starts_at: string;
   ends_at: string | null;
   all_day: boolean;
+  category: CalendarCategoryRef | null;
   created_by: string;
   created_by_display_name: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface CalendarCategoryRef {
+  id: string;
+  name: string;
+  color: string;
+}
+
+export interface CalendarCategory extends CalendarCategoryRef {
+  group_id: string | null;
+  owner_user_id: string | null;
+  created_at: string;
 }
 
 export interface ShoppingList {
