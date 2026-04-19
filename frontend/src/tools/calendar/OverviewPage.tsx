@@ -2,6 +2,8 @@ import {
   ArrowLeft,
   CalendarClock,
   CalendarDays,
+  ChevronLeft,
+  ChevronRight,
   ExternalLink,
   MapPin,
   Pencil,
@@ -44,7 +46,7 @@ import { formatDateTime, formatTime } from "../../lib/format";
 import { tripsApi } from "../trips/api";
 import { calendarApi } from "./api";
 
-type View = "agenda" | "month";
+type View = "agenda" | "month" | "day";
 
 export default function CalendarOverviewPage() {
   const { t } = useTranslation();
@@ -59,6 +61,7 @@ export default function CalendarOverviewPage() {
     startOfMonth(new Date()),
   );
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [dayViewDate, setDayViewDate] = useState<Date>(() => startOfDay(new Date()));
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<CalendarEvent | null>(null);
   const [formDefaults, setFormDefaults] = useState<{ date?: string } | null>(
@@ -247,6 +250,11 @@ export default function CalendarOverviewPage() {
           onClick={() => setView("agenda")}
         />
         <ViewTab
+          active={view === "day"}
+          label={t("calendar.overview.viewDay")}
+          onClick={() => setView("day")}
+        />
+        <ViewTab
           active={view === "month"}
           label={t("calendar.overview.viewMonth")}
           onClick={() => setView("month")}
@@ -300,6 +308,17 @@ export default function CalendarOverviewPage() {
             )}
           </>
         )
+      ) : view === "day" ? (
+        <DayView
+          date={dayViewDate}
+          onDateChange={setDayViewDate}
+          events={eventsByDay[toDateKey(dayViewDate)] ?? []}
+          tripItems={tripItemsByDay[toDateKey(dayViewDate)] ?? []}
+          tripsById={tripsById}
+          groupId={group.id}
+          onAdd={() => openCreateForDay(dayViewDate)}
+          onEdit={openEdit}
+        />
       ) : (
         <div className="card p-3 sm:p-5">
           <MonthCalendar
@@ -364,6 +383,238 @@ export default function CalendarOverviewPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function DayView({
+  date,
+  onDateChange,
+  events,
+  tripItems,
+  tripsById,
+  groupId,
+  onAdd,
+  onEdit,
+}: {
+  date: Date;
+  onDateChange: (d: Date) => void;
+  events: CalendarEvent[];
+  tripItems: TripItineraryItem[];
+  tripsById: Map<string, Trip>;
+  groupId: string;
+  onAdd: () => void;
+  onEdit: (ev: CalendarEvent) => void;
+}) {
+  const { t } = useTranslation();
+
+  // Split events into all-day (or cross-day) vs timed-on-this-day.
+  const dayStart = startOfDay(date);
+  const dayEnd = addDays(dayStart, 1);
+
+  const allDayEvents: CalendarEvent[] = [];
+  const timedEvents: CalendarEvent[] = [];
+  for (const ev of events) {
+    const sd = new Date(ev.starts_at);
+    const ed = ev.ends_at ? new Date(ev.ends_at) : sd;
+    const startsBefore = sd.getTime() < dayStart.getTime();
+    const endsAfter = ed.getTime() >= dayEnd.getTime();
+    if (ev.all_day || startsBefore || endsAfter) {
+      allDayEvents.push(ev);
+    } else {
+      timedEvents.push(ev);
+    }
+  }
+  timedEvents.sort(
+    (a, b) =>
+      new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime(),
+  );
+
+  // Trip items: all-day when no start_time, otherwise timed.
+  const allDayTrips: TripItineraryItem[] = [];
+  const timedTrips: TripItineraryItem[] = [];
+  for (const it of tripItems) {
+    if (it.start_time) timedTrips.push(it);
+    else allDayTrips.push(it);
+  }
+
+  // Hour grid config.
+  const HOUR_PX = 48;
+  const START_HOUR = 0;
+  const END_HOUR = 24;
+  const hours: number[] = [];
+  for (let h = START_HOUR; h <= END_HOUR; h++) hours.push(h);
+
+  function minutesSinceDayStart(d: Date): number {
+    const diff = (d.getTime() - dayStart.getTime()) / 60000;
+    return Math.max(0, Math.min(24 * 60, diff));
+  }
+
+  function parseTime(t: string): number {
+    const m = /^(\d{2}):(\d{2})/.exec(t);
+    if (!m) return 0;
+    return Number(m[1]) * 60 + Number(m[2]);
+  }
+
+  const gridHeight = (END_HOUR - START_HOUR) * HOUR_PX;
+
+  return (
+    <div className="card p-3 sm:p-5">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            className="btn-ghost -my-1"
+            onClick={() => onDateChange(addDays(date, -1))}
+            aria-label={t("calendar.overview.prevDay")}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <h3 className="text-sm font-semibold sm:text-base">
+            {formatDayLong(date)}
+          </h3>
+          <button
+            type="button"
+            className="btn-ghost -my-1"
+            onClick={() => onDateChange(addDays(date, 1))}
+            aria-label={t("calendar.overview.nextDay")}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            className="btn-ghost -my-1 ml-1 text-xs"
+            onClick={() => onDateChange(startOfDay(new Date()))}
+          >
+            {t("calendar.grid.today")}
+          </button>
+        </div>
+        <button type="button" className="btn-secondary" onClick={onAdd}>
+          <Plus className="h-4 w-4" />
+          {t("calendar.overview.add")}
+        </button>
+      </div>
+
+      {(allDayEvents.length > 0 || allDayTrips.length > 0) && (
+        <div className="mb-3 space-y-1 border-b border-slate-100 pb-3 dark:border-slate-800">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            {t("calendar.overview.allDay")}
+          </p>
+          {allDayEvents.map((ev) => (
+            <button
+              key={ev.id}
+              type="button"
+              onClick={() => onEdit(ev)}
+              className="block w-full truncate rounded bg-brand-500/90 px-2 py-1 text-left text-xs font-medium text-white hover:bg-brand-600"
+              title={ev.title}
+            >
+              {ev.title}
+            </button>
+          ))}
+          {allDayTrips.map((it) => (
+            <div
+              key={"trip-" + it.id}
+              className="truncate rounded border border-sky-300/70 bg-sky-50/70 px-2 py-1 text-xs font-medium text-sky-800 dark:border-sky-900/40 dark:bg-sky-950/30 dark:text-sky-200"
+              title={it.title}
+            >
+              <Plane className="mr-1 inline h-3 w-3" />
+              {it.title}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {timedEvents.length === 0 &&
+      timedTrips.length === 0 &&
+      allDayEvents.length === 0 &&
+      allDayTrips.length === 0 ? (
+        <p className="py-6 text-center text-sm text-slate-500 dark:text-slate-400">
+          {t("calendar.overview.dayEmpty")}
+        </p>
+      ) : (
+        <div className="relative overflow-hidden rounded-lg border border-slate-100 dark:border-slate-800">
+          <div className="relative" style={{ height: `${gridHeight}px` }}>
+            {hours.map((h) => (
+              <div
+                key={h}
+                className="absolute left-0 right-0 flex border-t border-slate-100 dark:border-slate-800"
+                style={{ top: `${(h - START_HOUR) * HOUR_PX}px` }}
+              >
+                <div className="w-12 shrink-0 -translate-y-2 pl-2 text-[10px] tabular-nums text-slate-500 dark:text-slate-400">
+                  {h < 24 ? `${String(h).padStart(2, "0")}:00` : ""}
+                </div>
+              </div>
+            ))}
+
+            <div className="absolute inset-y-0 left-12 right-0">
+              {timedEvents.map((ev) => {
+                const sd = new Date(ev.starts_at);
+                const ed = ev.ends_at ? new Date(ev.ends_at) : sd;
+                const top =
+                  (minutesSinceDayStart(sd) / 60) * HOUR_PX -
+                  START_HOUR * HOUR_PX;
+                const height = Math.max(
+                  18,
+                  ((minutesSinceDayStart(ed) - minutesSinceDayStart(sd)) / 60) *
+                    HOUR_PX,
+                );
+                return (
+                  <button
+                    key={ev.id}
+                    type="button"
+                    onClick={() => onEdit(ev)}
+                    className="absolute left-1 right-1 overflow-hidden rounded bg-brand-500/90 px-2 py-1 text-left text-xs text-white shadow-sm hover:bg-brand-600"
+                    style={{ top: `${top}px`, height: `${height}px` }}
+                    title={ev.title}
+                  >
+                    <span className="block font-semibold">
+                      {formatTime(ev.starts_at)}
+                      {ev.ends_at ? ` – ${formatTime(ev.ends_at)}` : ""}
+                    </span>
+                    <span className="block truncate">{ev.title}</span>
+                    {ev.location && (
+                      <span className="block truncate text-[10px] opacity-80">
+                        {ev.location}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+              {timedTrips.map((it) => {
+                const startMin = parseTime(it.start_time ?? "00:00");
+                const endMin = it.end_time
+                  ? parseTime(it.end_time)
+                  : startMin + 60;
+                const top = (startMin / 60) * HOUR_PX - START_HOUR * HOUR_PX;
+                const height = Math.max(18, ((endMin - startMin) / 60) * HOUR_PX);
+                const trip = tripsById.get(it.trip_id);
+                return (
+                  <Link
+                    key={"trip-" + it.id}
+                    to={`/groups/${groupId}/trips/${it.trip_id}`}
+                    className="absolute left-1 right-1 overflow-hidden rounded border border-sky-300 bg-sky-50/90 px-2 py-1 text-left text-xs text-sky-900 shadow-sm hover:bg-sky-100 dark:border-sky-700 dark:bg-sky-950/60 dark:text-sky-100"
+                    style={{ top: `${top}px`, height: `${height}px` }}
+                    title={it.title}
+                  >
+                    <span className="block font-semibold">
+                      <Plane className="mr-1 inline h-3 w-3" />
+                      {it.start_time?.slice(0, 5)}
+                      {it.end_time ? ` – ${it.end_time.slice(0, 5)}` : ""}
+                    </span>
+                    <span className="block truncate">{it.title}</span>
+                    {trip && (
+                      <span className="block truncate text-[10px] opacity-80">
+                        {trip.name}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
