@@ -295,6 +295,7 @@ const de: Translations = {
     },
     detail: {
       backToList: "Zu allen Reisen",
+      infoNeeded: "Trage hier zuerst dein Ziel und die Daten ein.",
     },
     overview: {
       backToGroup: "Zur Gruppe",

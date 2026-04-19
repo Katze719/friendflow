@@ -292,6 +292,7 @@ const en = {
     },
     detail: {
       backToList: "All trips",
+      infoNeeded: "Add your destination and dates here first.",
     },
     overview: {
       backToGroup: "Back to group",
