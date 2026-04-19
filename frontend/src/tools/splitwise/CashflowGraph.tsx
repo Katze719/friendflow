@@ -26,7 +26,7 @@ export default function CashflowGraph({
   const { t } = useTranslation();
 
   // Only include participants that actually appear in the settlements or
-  // carry a non-zero balance — otherwise a big group with most people
+  // carry a non-zero balance - otherwise a big group with most people
   // settled would look cluttered.
   const activeIds = useMemo(() => {
     const set = new Set<string>();

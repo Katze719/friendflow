@@ -23,6 +23,7 @@ import LanguageSwitcher from "../components/LanguageSwitcher";
 import ThemeSwitcher from "../components/ThemeSwitcher";
 
 const GITHUB_URL = "https://github.com/Katze719/friendflow";
+const LICENSE_URL = "https://github.com/Katze719/friendflow/blob/main/LICENSE";
 
 /**
  * Public marketing / intro page shown to unauthenticated visitors when
@@ -61,6 +62,15 @@ export default function Landing() {
             >
               <Github className="h-3.5 w-3.5" />
               {t("landing.nav.github")}
+            </a>
+            <a
+              href={LICENSE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-slate-900 dark:hover:text-slate-100"
+              title={t("landing.license.tooltip")}
+            >
+              {t("landing.license.short")}
             </a>
             <Link to="/login" className="hover:text-slate-900 dark:hover:text-slate-100">
               {t("landing.nav.signIn")}
@@ -402,16 +412,27 @@ function Values() {
                 {t(`landing.values.${id}.body`)}
               </p>
               {id === "selfHosted" && (
-                <a
-                  href={GITHUB_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-1 inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
-                >
-                  <Github className="h-4 w-4" />
-                  {t("landing.values.selfHosted.cta")}
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </a>
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <a
+                    href={GITHUB_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300"
+                  >
+                    <Github className="h-4 w-4" />
+                    {t("landing.values.selfHosted.cta")}
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </a>
+                  <a
+                    href={LICENSE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100"
+                    title={t("landing.license.tooltip")}
+                  >
+                    {t("landing.license.short")}
+                  </a>
+                </div>
               )}
             </div>
           ))}

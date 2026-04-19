@@ -130,7 +130,7 @@ pub struct CreatePaymentRequest {
 /// whatever j owes i. The direction and remainder of the winner is kept.
 /// Self-debts (paid_by == user) are ignored.
 fn net_direct_debts(raw: &[(Uuid, Uuid, i64)]) -> Vec<(Uuid, Uuid, i64)> {
-    // raw: (debtor, creditor, amount) — "debtor owes creditor `amount`".
+    // raw: (debtor, creditor, amount) - "debtor owes creditor `amount`".
     let mut pair: HashMap<(Uuid, Uuid), i64> = HashMap::new();
     for &(debtor, creditor, amount) in raw {
         if debtor == creditor || amount == 0 {

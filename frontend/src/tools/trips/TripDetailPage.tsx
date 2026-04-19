@@ -43,7 +43,7 @@ function writeTab(tripId: string, tab: TabId) {
 /**
  * A trip counts as "needing setup" when neither destinations nor dates have
  * been filled in. In that state we highlight the Info tab so the user
- * notices they should record the basics — but we don't force them to.
+ * notices they should record the basics - but we don't force them to.
  */
 function needsInfoSetup(trip: Trip): boolean {
   return (
@@ -64,7 +64,7 @@ export default function TripDetailPage() {
   const [group, setGroup] = useState<GroupDetail | null>(null);
   const [trip, setTrip] = useState<Trip | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // `null` means "not decided yet" — we wait for the trip to load so we can
+  // `null` means "not decided yet" - we wait for the trip to load so we can
   // pick a sensible default based on whether the trip is still empty.
   const [tab, setTab] = useState<TabId | null>(null);
   const initializedFor = useRef<string | null>(null);
@@ -79,7 +79,7 @@ export default function TripDetailPage() {
   // Pick the initial tab exactly once per trip: honour the user's stored
   // choice if there is one, otherwise land on Info for an unconfigured
   // trip. This nudges new users towards filling in destinations/dates
-  // first without locking them in — a single click moves them away.
+  // first without locking them in - a single click moves them away.
   useEffect(() => {
     if (!tripId || !trip) return;
     if (initializedFor.current === tripId) return;

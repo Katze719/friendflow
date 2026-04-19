@@ -20,8 +20,8 @@
 
 Every tool lives inside a **group** (your flat, trip, regular crew, ...), and
 every group has its own members and data. Ships with four tools out of the box
-— a Splitwise-style expense ledger, trip planning, a shared calendar, and
-shopping lists — and is designed so you can bolt on more as independent modules.
+- a Splitwise-style expense ledger, trip planning, a shared calendar, and
+shopping lists - and is designed so you can bolt on more as independent modules.
 
 ---
 
@@ -107,9 +107,9 @@ deployments need:
 | Variable             | Default        | What it does                                                                                                                                                            |
 | -------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `POSTGRES_USER`      | `friendflow`   | Postgres role used by the backend.                                                                                                                                      |
-| `POSTGRES_PASSWORD`  | —              | Postgres password. **Change before exposing to the internet.**                                                                                                          |
+| `POSTGRES_PASSWORD`  | -              | Postgres password. **Change before exposing to the internet.**                                                                                                          |
 | `POSTGRES_DB`        | `friendflow`   | Postgres database name.                                                                                                                                                 |
-| `JWT_SECRET`         | —              | Min. 32 chars. `bootstrap.sh` generates one for you.                                                                                                                    |
+| `JWT_SECRET`         | -              | Min. 32 chars. `bootstrap.sh` generates one for you.                                                                                                                    |
 | `JWT_EXPIRY_HOURS`   | `168`          | How long login tokens stay valid.                                                                                                                                       |
 | `CORS_ORIGIN`        | localhost:8080 | Comma-separated list of allowed origins. Set this to your public URL in production.                                                                                     |
 | `REGISTRATION_MODE`  | `approval`     | `approval` = new sign-ups wait for an admin; `open` = new sign-ups are auto-approved and can log in immediately.                                                        |
@@ -124,7 +124,7 @@ deployments need:
 `LANDING_MODE` and `VITE_API_URL` are baked into the frontend at build
 time, so changing them requires
 `docker compose build frontend && docker compose up -d`. The others read
-live from env on backend start — `docker compose restart backend` is
+live from env on backend start - `docker compose restart backend` is
 enough.
 
 ## Bootstrapping the first admin
@@ -151,7 +151,7 @@ docker compose exec backend friendflow-backend admin demote someone@example.com
 docker compose exec backend friendflow-backend admin delete someone@example.com
 ```
 
-With `REGISTRATION_MODE=open` you can skip the promote step — just
+With `REGISTRATION_MODE=open` you can skip the promote step - just
 register, then promote your own account to admin with the CLI above to
 unlock the Admin page.
 
@@ -161,7 +161,7 @@ The default compose stack serves plain HTTP on port `8080`. For a public
 deployment you have three sensible options; pick whichever fits your
 setup.
 
-### Option 1 — Cloudflare proxy + Cloudflare Origin Certificate (recommended)
+### Option 1 - Cloudflare proxy + Cloudflare Origin Certificate (recommended)
 
 If you front the domain with Cloudflare (orange cloud), create a free
 **15-year Origin Certificate** under
@@ -196,7 +196,7 @@ If you front the domain with Cloudflare (orange cloud), create a free
 5. Update `CORS_ORIGIN` in `.env` to the public URL, e.g.
    `https://friendflow.site,https://www.friendflow.site`.
 
-### Option 2 — Cloudflare Tunnel (no open inbound ports)
+### Option 2 - Cloudflare Tunnel (no open inbound ports)
 
 Run `cloudflared` as an additional compose service with a tunnel token
 and point the public hostname at `http://frontend:80`. The origin keeps
@@ -204,7 +204,7 @@ all ports closed; TLS is fully handled by Cloudflare. No changes to the
 nginx config are necessary, just remove the `ports:` mapping on the
 `frontend` service (leave `expose: - "80"`).
 
-### Option 3 — Let's Encrypt directly
+### Option 3 - Let's Encrypt directly
 
 If you're not using Cloudflare, put a TLS-terminating reverse proxy
 (Caddy, Traefik, or nginx + certbot) in front of the frontend container
@@ -267,7 +267,7 @@ can stay HTTP-only in that case.
 - **Password hashing**: argon2id (via the `argon2` crate).
 - **Auth**: JWT (HS256); the signing secret is taken from `JWT_SECRET`.
   The auth middleware additionally verifies that the user still exists
-  and is approved on every request — revoked/demoted users lose access
+  and is approved on every request - revoked/demoted users lose access
   even if their token has not expired yet.
 - **Registration**: open, with admin approval gated by
   `REGISTRATION_MODE` (default `approval`). In `open` mode accounts are
@@ -289,9 +289,9 @@ or later** (AGPL-3.0-or-later). See [LICENSE](LICENSE) for the full text.
 
 In short: you are free to run, study, modify and redistribute friendflow.
 If you run a **modified** version as a network service, you must make the
-modified source code available to its users — typically by linking to a
+modified source code available to its users - typically by linking to a
 public repository of your fork. Running an **unmodified** instance for
 yourself and your friends imposes no such obligation.
 
-If that doesn't fit your use-case, open an issue — dual-licensing can be
+If that doesn't fit your use-case, open an issue - dual-licensing can be
 discussed on a case-by-case basis.

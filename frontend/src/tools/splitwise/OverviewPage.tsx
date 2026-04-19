@@ -556,8 +556,8 @@ function PaymentItem({
         });
 
   // Paying/receiving flips sign meaning compared to expenses:
-  // - If I paid someone, my debt went down — a positive event (green).
-  // - If somebody paid me, my credit went down — neutral/informational.
+  // - If I paid someone, my debt went down - a positive event (green).
+  // - If somebody paid me, my credit went down - neutral/informational.
   const amountTone = iPaid
     ? "text-emerald-600 dark:text-emerald-400"
     : iReceived

@@ -57,6 +57,10 @@ const en = {
       signUp: "Get started",
       github: "GitHub",
     },
+    license: {
+      short: "AGPL-3.0",
+      tooltip: "Licensed under the GNU Affero General Public License v3.0",
+    },
     hero: {
       eyebrow: "Plan together, self-hosted",
       title: "One calm home base for your crew.",

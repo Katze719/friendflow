@@ -26,7 +26,7 @@ import { tripsApi } from "./api";
 
 /**
  * "Info" tab for a single trip: edit the lightweight metadata that turns a
- * link board into a real trip — name, dates, destinations, budget — plus a
+ * link board into a real trip - name, dates, destinations, budget - plus a
  * delete action. Every field except the name is optional.
  */
 export default function InfoTab({

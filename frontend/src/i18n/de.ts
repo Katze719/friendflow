@@ -59,6 +59,10 @@ const de: Translations = {
       signUp: "Loslegen",
       github: "GitHub",
     },
+    license: {
+      short: "AGPL-3.0",
+      tooltip: "Lizenziert unter der GNU Affero General Public License v3.0",
+    },
     hero: {
       eyebrow: "Gemeinsam planen, selbst gehostet",
       title: "Ein ruhiger Ort für deine Crew.",
