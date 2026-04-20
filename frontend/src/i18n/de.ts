@@ -68,6 +68,14 @@ const de: Translations = {
     hero: {
       eyebrow: "Gemeinsam planen, selbst gehostet",
       title: "Ein ruhiger Ort für deine Crew.",
+      titlePhrases: [
+        "Reisen planen.",
+        "Ausgaben teilen.",
+        "Termine abstimmen.",
+        "Einkaufslisten teilen.",
+        "Erinnerungen sammeln.",
+        "Gemeinsam unterwegs.",
+      ],
       subtitle:
         "friendflow bündelt Reiseplanung, geteilte Ausgaben, einen Gruppenkalender und Einkaufslisten in einer App, die du selbst hostest. Kein Tracking, keine Werbung - nur Tools, die du und deine Leute wirklich nutzt.",
       ctaPrimary: "Kostenloses Konto anlegen",

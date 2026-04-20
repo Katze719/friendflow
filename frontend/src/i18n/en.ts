@@ -66,6 +66,14 @@ const en = {
     hero: {
       eyebrow: "Plan together, self-hosted",
       title: "One calm home base for your crew.",
+      titlePhrases: [
+        "Plan trips together.",
+        "Split expenses fairly.",
+        "Coordinate schedules.",
+        "Share shopping lists.",
+        "Capture memories.",
+        "Travel as a crew.",
+      ],
       subtitle:
         "friendflow bundles trip planning, shared expenses, a group calendar and shopping lists into a single app you host yourself. No tracking, no ads - just the tools you and your friends actually use.",
       ctaPrimary: "Create your free account",
