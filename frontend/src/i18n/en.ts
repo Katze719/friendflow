@@ -66,7 +66,7 @@ const en = {
       tooltip: "Licensed under the GNU Affero General Public License v3.0",
     },
     hero: {
-      eyebrow: "Plan together, self-hosted",
+      eyebrow: "One app for your group",
       title: "One calm home base for your crew.",
       titlePhrases: [
         "Plan trips together.",
@@ -77,8 +77,8 @@ const en = {
         "Travel as a crew.",
       ],
       subtitle:
-        "friendflow bundles trip planning, shared expenses, a group calendar and shopping lists into a single app you host yourself. No tracking, no ads - just the tools you and your friends actually use.",
-      ctaPrimary: "Create your free account",
+        "Plan trips, split expenses, align schedules, share shopping lists – all with the same people, in one clear place. You can also run friendflow on your own server: no tracking, no ads, your rules.",
+      ctaPrimary: "Create your account",
       ctaSecondary: "I already have an account",
       ctaGithub: "View source",
       bullet1: "Unlimited groups, trips and expenses",
@@ -226,9 +226,9 @@ const en = {
     },
     how: {
       eyebrow: "How it works",
-      title: "Three steps, then you forget about it.",
+      title: "Three steps to get your group going.",
       subtitle:
-        "friendflow stays out of your way: quick to set up, quick to invite people, quick to use daily.",
+        "Create a group, invite your people, open the tools you need – no detours, no clutter.",
       step1: {
         title: "Create a group",
         body: "A group is one circle of friends - a flat, a crew, a trip. Name it, set a currency, done.",
@@ -243,7 +243,7 @@ const en = {
       },
     },
     values: {
-      eyebrow: "Why self-host",
+      eyebrow: "Trust & control",
       title: "Built for the long haul.",
       subtitle:
         "friendflow is open, honest software. No accounts you can't delete, no analytics watching your every tap.",

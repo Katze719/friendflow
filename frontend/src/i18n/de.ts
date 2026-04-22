@@ -68,7 +68,7 @@ const de: Translations = {
       tooltip: "Lizenziert unter der GNU Affero General Public License v3.0",
     },
     hero: {
-      eyebrow: "Gemeinsam planen, selbst gehostet",
+      eyebrow: "Eine App für eure Gruppe",
       title: "Ein ruhiger Ort für deine Crew.",
       titlePhrases: [
         "Reisen planen.",
@@ -79,8 +79,8 @@ const de: Translations = {
         "Gemeinsam unterwegs.",
       ],
       subtitle:
-        "friendflow bündelt Reiseplanung, geteilte Ausgaben, einen Gruppenkalender und Einkaufslisten in einer App, die du selbst hostest. Kein Tracking, keine Werbung - nur Tools, die du und deine Leute wirklich nutzt.",
-      ctaPrimary: "Kostenloses Konto anlegen",
+        "Reisen planen, Ausgaben teilen, Termine abstimmen, Einkaufslisten führen – alles mit derselben Crew, in einer klaren Oberfläche. Wer will, betreibt friendflow auf dem eigenen Server: ohne Tracking, ohne Werbung, mit eigenen Regeln.",
+      ctaPrimary: "Erstelle dein Konto",
       ctaSecondary: "Ich habe schon ein Konto",
       ctaGithub: "Quellcode ansehen",
       bullet1: "Unbegrenzt Gruppen, Reisen und Ausgaben",
@@ -228,9 +228,9 @@ const de: Translations = {
     },
     how: {
       eyebrow: "So läuft's",
-      title: "Drei Schritte, dann vergisst du es.",
+      title: "Drei Schritte – und ihr seid startklar.",
       subtitle:
-        "friendflow drängt sich nicht auf: schnell eingerichtet, schnell eingeladen, schnell im Alltag benutzt.",
+        "Gruppe anlegen, Leute einladen, die Tools nutzen, die ihr braucht. Ohne Umwege, ohne Ballast.",
       step1: {
         title: "Gruppe anlegen",
         body: "Eine Gruppe ist ein Freundeskreis - WG, Crew oder Trip. Name, Währung, fertig.",
@@ -245,7 +245,7 @@ const de: Translations = {
       },
     },
     values: {
-      eyebrow: "Warum selbst hosten",
+      eyebrow: "Vertrauen & Kontrolle",
       title: "Auf Dauer angelegt.",
       subtitle:
         "friendflow ist ehrliche, offene Software. Keine Konten, die du nicht löschen kannst, kein Analytics, das jeden Tap mitliest.",
@@ -292,7 +292,7 @@ const de: Translations = {
       title: "Lust, fünf Chat-Apps loszuwerden?",
       subtitle:
         "Leg eine Gruppe an, lad deine Crew ein und halte den nächsten Trip, das Dinner und WG-Entscheidungen an einem ruhigen Ort.",
-      ctaPrimary: "Konto anlegen",
+      ctaPrimary: "Erstelle dein Konto",
       ctaSecondary: "Anmelden",
     },
   },

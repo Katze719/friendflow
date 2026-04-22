@@ -51,8 +51,8 @@ export default function Landing() {
         <Features />
         <Tour />
         <HowItWorks />
-        <Values />
         <Faq />
+        <Values />
         <FinalCta />
       </main>
 
@@ -459,9 +459,9 @@ function TrustBar() {
   const { t } = useTranslation();
   const items: { icon: LucideIcon; key: string }[] = [
     { icon: Lock, key: "privacy" },
-    { icon: Server, key: "selfHosted" },
     { icon: Smartphone, key: "pwa" },
     { icon: Globe, key: "multiLang" },
+    { icon: Server, key: "selfHosted" },
   ];
   return (
     <section className="mx-auto max-w-6xl px-safe pb-4">
@@ -559,9 +559,9 @@ function Values() {
   const { t } = useTranslation();
   const items: { icon: LucideIcon; id: string }[] = [
     { icon: Lock, id: "privacy" },
-    { icon: Server, id: "selfHosted" },
     { icon: Smartphone, id: "pwa" },
     { icon: Globe, id: "open" },
+    { icon: Server, id: "selfHosted" },
   ];
   return (
     <section className="relative border-y border-slate-200/70 bg-white/60 dark:border-slate-800/70 dark:bg-slate-900/40">
