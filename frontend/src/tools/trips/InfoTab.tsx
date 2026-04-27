@@ -13,6 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { ApiError } from "../../api/client";
 import type { GroupDetail, Trip, TripDestination } from "../../api/types";
 import HelpBanner from "../../components/HelpBanner";
+import { formatDateTime } from "../../lib/format";
 import { useConfirm, useToast } from "../../ui/UIProvider";
 import { tripsApi, type UpdateTripPayload } from "./api";
 import { needsTripInfoSetup } from "./tripSetup";
@@ -499,11 +500,13 @@ export default function InfoTab({
           <Trash2 className="h-4 w-4" />
           {deleting ? t("common.saving") : t("trips.info.deleteTrip")}
         </button>
-        {saving ? (
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            {t("trips.info.autosaving")}
-          </p>
-        ) : null}
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          {saving
+            ? t("trips.info.autosaving")
+            : t("trips.info.lastSavedAt", {
+                time: formatDateTime(trip.updated_at),
+              })}
+        </p>
       </div>
     </div>
   );

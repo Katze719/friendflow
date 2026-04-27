@@ -755,6 +755,7 @@ const en = {
       budgetRemaining: "Remaining: {{amount}}",
       budgetOverBy: "Over budget by {{amount}}",
       saved: "Saved.",
+      lastSavedAt: "Last saved {{time}}",
       autosaving: "Saving…",
       errorDates: "Arrival must not be after departure.",
       errorBudget: "Budget must be a positive number.",

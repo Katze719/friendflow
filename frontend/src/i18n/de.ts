@@ -759,6 +759,7 @@ const de: Translations = {
       budgetRemaining: "Noch übrig: {{amount}}",
       budgetOverBy: "Überzogen um {{amount}}",
       saved: "Gespeichert.",
+      lastSavedAt: "Zuletzt gespeichert: {{time}}",
       autosaving: "Speichert…",
       errorDates: "Anreise darf nicht nach der Abreise liegen.",
       errorBudget: "Budget muss eine positive Zahl sein.",
