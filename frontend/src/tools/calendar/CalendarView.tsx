@@ -15,7 +15,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { ApiError } from "../../api/client";
@@ -1424,6 +1424,14 @@ function EventForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /** New events: mirror end date to start until the user has chosen an end date. */
+  useEffect(() => {
+    if (event) return;
+    if (startDate && !endDate) {
+      setEndDate(startDate);
+    }
+  }, [event, startDate, endDate]);
+
   async function submit(e: FormEvent) {
     e.preventDefault();
     setError(null);
@@ -1519,7 +1527,12 @@ function EventForm({
             onChange={(e) => {
               const v = e.target.value;
               setStartDate(v);
-              if (endDate && v && endDate < v) setEndDate(v);
+              if (!v) return;
+              if (endDate && endDate < v) {
+                setEndDate(v);
+              } else if (!event && !endDate) {
+                setEndDate(v);
+              }
             }}
           />
         </div>
