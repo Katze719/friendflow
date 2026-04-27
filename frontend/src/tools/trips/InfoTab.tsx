@@ -4,19 +4,60 @@ import {
   MapPin,
   Pencil,
   Plus,
-  Save,
   Trash2,
   Type,
 } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { ApiError } from "../../api/client";
 import type { GroupDetail, Trip, TripDestination } from "../../api/types";
 import HelpBanner from "../../components/HelpBanner";
 import { useConfirm, useToast } from "../../ui/UIProvider";
-import { tripsApi } from "./api";
+import { tripsApi, type UpdateTripPayload } from "./api";
 import { needsTripInfoSetup } from "./tripSetup";
+
+function buildTripDetailsPayload(
+  startDate: string,
+  endDate: string,
+  budget: string,
+  destinations: TripDestination[],
+):
+  | { ok: true; body: UpdateTripPayload }
+  | { ok: false; reason: "dates" | "budget" } {
+  if (startDate && endDate && startDate > endDate) {
+    return { ok: false, reason: "dates" };
+  }
+  let budgetCents: number | null = null;
+  if (budget.trim() !== "") {
+    const parsed = Number.parseFloat(budget.replace(",", "."));
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      return { ok: false, reason: "budget" };
+    }
+    budgetCents = Math.round(parsed * 100);
+  }
+  const clean = destinations
+    .map((d) => ({
+      name: d.name.trim(),
+      lat: d.lat ?? null,
+      lng: d.lng ?? null,
+    }))
+    .filter((d) => d.name.length > 0);
+
+  return {
+    ok: true,
+    body: {
+      start_date: startDate || null,
+      end_date: endDate || null,
+      budget_cents: budgetCents,
+      destinations: clean,
+    },
+  };
+}
+
+function payloadSignature(body: UpdateTripPayload): string {
+  return JSON.stringify(body);
+}
 
 /**
  * "Info" tab for a single trip: edit the lightweight metadata that turns a
@@ -50,6 +91,12 @@ export default function InfoTab({
     trip.destinations ?? [],
   );
 
+  const lastSentSigRef = useRef<string | null>(null);
+  const saveGenRef = useRef(0);
+  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onTripChangedRef = useRef(onTripChanged);
+  onTripChangedRef.current = onTripChanged;
+
   useEffect(() => {
     setName(trip.name);
     setStartDate(trip.start_date ?? "");
@@ -58,47 +105,91 @@ export default function InfoTab({
       trip.budget_cents == null ? "" : (trip.budget_cents / 100).toFixed(2),
     );
     setDestinations(trip.destinations ?? []);
+    const baseline = buildTripDetailsPayload(
+      trip.start_date ?? "",
+      trip.end_date ?? "",
+      trip.budget_cents == null ? "" : (trip.budget_cents / 100).toFixed(2),
+      trip.destinations ?? [],
+    );
+    if (baseline.ok) {
+      lastSentSigRef.current = payloadSignature(baseline.body);
+    }
   }, [trip]);
 
-  async function onSave(e: FormEvent) {
-    e.preventDefault();
-    if (startDate && endDate && startDate > endDate) {
-      toast.error(t("trips.info.errorDates"));
+  useEffect(() => {
+    if (autosaveTimerRef.current) {
+      window.clearTimeout(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
+    }
+
+    const built = buildTripDetailsPayload(
+      startDate,
+      endDate,
+      budget,
+      destinations,
+    );
+    if (!built.ok) {
       return;
     }
-    let budgetCents: number | null = null;
-    if (budget.trim() !== "") {
-      const parsed = Number.parseFloat(budget.replace(",", "."));
-      if (!Number.isFinite(parsed) || parsed < 0) {
-        toast.error(t("trips.info.errorBudget"));
+    const sig = payloadSignature(built.body);
+    if (sig === lastSentSigRef.current) {
+      return;
+    }
+
+    autosaveTimerRef.current = window.setTimeout(async () => {
+      autosaveTimerRef.current = null;
+      const latest = buildTripDetailsPayload(
+        startDate,
+        endDate,
+        budget,
+        destinations,
+      );
+      if (!latest.ok) {
+        if (latest.reason === "dates") {
+          toast.error(t("trips.info.errorDates"));
+        } else {
+          toast.error(t("trips.info.errorBudget"));
+        }
         return;
       }
-      budgetCents = Math.round(parsed * 100);
-    }
-    const clean = destinations
-      .map((d) => ({
-        name: d.name.trim(),
-        lat: d.lat ?? null,
-        lng: d.lng ?? null,
-      }))
-      .filter((d) => d.name.length > 0);
+      const latestSig = payloadSignature(latest.body);
+      if (latestSig === lastSentSigRef.current) {
+        return;
+      }
 
-    setSaving(true);
-    try {
-      const updated = await tripsApi.updateTrip(group.id, trip.id, {
-        start_date: startDate || null,
-        end_date: endDate || null,
-        budget_cents: budgetCents,
-        destinations: clean,
-      });
-      onTripChanged(updated);
-      toast.success(t("trips.info.saved"));
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : t("common.error"));
-    } finally {
-      setSaving(false);
-    }
-  }
+      const gen = ++saveGenRef.current;
+      setSaving(true);
+      try {
+        const updated = await tripsApi.updateTrip(
+          group.id,
+          trip.id,
+          latest.body,
+        );
+        if (gen !== saveGenRef.current) {
+          return;
+        }
+        lastSentSigRef.current = latestSig;
+        onTripChangedRef.current(updated);
+      } catch (err) {
+        if (gen === saveGenRef.current) {
+          toast.error(
+            err instanceof ApiError ? err.message : t("common.error"),
+          );
+        }
+      } finally {
+        if (gen === saveGenRef.current) {
+          setSaving(false);
+        }
+      }
+    }, 450);
+
+    return () => {
+      if (autosaveTimerRef.current) {
+        window.clearTimeout(autosaveTimerRef.current);
+        autosaveTimerRef.current = null;
+      }
+    };
+  }, [startDate, endDate, budget, destinations, group.id, trip.id, t, toast]);
 
   async function submitRename(e: FormEvent) {
     e.preventDefault();
@@ -155,9 +246,7 @@ export default function InfoTab({
 
   const serverNeedsSetup = needsTripInfoSetup(trip);
   const hasFormDates = Boolean(startDate || endDate);
-  const hasFormDestination = destinations.some((d) => d.name.trim().length > 0);
   const highlightDatesSection = serverNeedsSetup && !hasFormDates;
-  const highlightDestinationsSection = serverNeedsSetup && !hasFormDestination;
 
   function setupPulseDot() {
     return (
@@ -172,7 +261,7 @@ export default function InfoTab({
   }
 
   return (
-    <form onSubmit={onSave} className="space-y-6">
+    <div className="space-y-6">
       <HelpBanner
         storageKey="friendflow.banner.trip.info"
         title={t("trips.info.bannerTitle")}
@@ -198,12 +287,10 @@ export default function InfoTab({
               maxLength={120}
               required
             />
-            <button type="submit" className="btn-primary h-9 py-1 text-sm">
-              {t("common.save")}
-            </button>
             <button
               type="button"
               className="btn-ghost h-9 py-1 text-sm"
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => {
                 setName(trip.name);
                 setRenaming(false);
@@ -211,6 +298,9 @@ export default function InfoTab({
             >
               {t("common.cancel")}
             </button>
+            <p className="basis-full text-xs text-slate-500 dark:text-slate-400">
+              {t("trips.info.renameHint")}
+            </p>
           </form>
         ) : (
           <div className="flex flex-wrap items-center gap-2">
@@ -273,7 +363,6 @@ export default function InfoTab({
       <section className="card space-y-4 p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="flex items-center gap-2 text-lg font-semibold">
-            {highlightDestinationsSection ? setupPulseDot() : null}
             <MapPin className="h-5 w-5 shrink-0 text-brand-500" />
             {t("trips.info.destinationsTitle")}
           </h2>
@@ -286,11 +375,6 @@ export default function InfoTab({
             {t("trips.info.addDestination")}
           </button>
         </div>
-        {highlightDestinationsSection ? (
-          <p className="text-sm text-slate-600 dark:text-slate-400">
-            {t("trips.info.setupNudgeDestinations")}
-          </p>
-        ) : null}
         {destinations.length === 0 ? (
           <p className="text-sm text-slate-500 dark:text-slate-400">
             {t("trips.info.destinationsEmpty")}
@@ -315,7 +399,6 @@ export default function InfoTab({
                     }
                     placeholder={t("trips.info.destinationNamePlaceholder")}
                     maxLength={120}
-                    required
                   />
                 </div>
                 <div>
@@ -406,7 +489,7 @@ export default function InfoTab({
         <BudgetWidget trip={trip} currency={group.currency} />
       </section>
 
-      <div className="flex flex-col-reverse justify-between gap-3 sm:flex-row">
+      <div className="flex flex-col-reverse flex-wrap items-start justify-between gap-3 sm:flex-row sm:items-center">
         <button
           type="button"
           className="btn-ghost self-start text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-950/40"
@@ -416,16 +499,13 @@ export default function InfoTab({
           <Trash2 className="h-4 w-4" />
           {deleting ? t("common.saving") : t("trips.info.deleteTrip")}
         </button>
-        <button
-          type="submit"
-          className="btn-primary self-end"
-          disabled={saving}
-        >
-          <Save className="h-4 w-4" />
-          {saving ? t("common.saving") : t("common.save")}
-        </button>
+        {saving ? (
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {t("trips.info.autosaving")}
+          </p>
+        ) : null}
       </div>
-    </form>
+    </div>
   );
 }
 
