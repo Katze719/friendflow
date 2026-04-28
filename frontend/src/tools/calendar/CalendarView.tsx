@@ -45,6 +45,8 @@ import {
 } from "./api";
 
 type View = "agenda" | "month" | "day";
+type TimeFormatPref = "24h" | "12h";
+const TIME_FORMAT_KEY = "calendar.timeFormat";
 
 export interface CalendarViewProps {
   /** Default scope used for creating new events. */
@@ -134,6 +136,9 @@ export default function CalendarView({
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   // null = show all; Set of category ids (or "__none__" for uncategorized).
   const [filter, setFilter] = useState<Set<string> | null>(null);
+  const [timeFormat, setTimeFormat] = useState<TimeFormatPref>(() =>
+    loadTimeFormatPref(),
+  );
 
   const filteredEvents = useMemo(() => {
     if (!filter) return events;
@@ -365,6 +370,32 @@ export default function CalendarView({
             {overlayToggle.label}
           </button>
         )}
+        <div
+          className="segmented"
+          role="group"
+          aria-label={t("calendar.overview.timeFormatLabel")}
+        >
+          <button
+            type="button"
+            className={`segmented-item ${timeFormat === "24h" ? "segmented-item-active" : "segmented-item-idle"}`}
+            onClick={() => {
+              setTimeFormat("24h");
+              saveTimeFormatPref("24h");
+            }}
+          >
+            {t("calendar.overview.timeFormat24")}
+          </button>
+          <button
+            type="button"
+            className={`segmented-item ${timeFormat === "12h" ? "segmented-item-active" : "segmented-item-idle"}`}
+            onClick={() => {
+              setTimeFormat("12h");
+              saveTimeFormatPref("12h");
+            }}
+          >
+            {t("calendar.overview.timeFormat12")}
+          </button>
+        </div>
       </div>
 
       {showForm && (
@@ -372,6 +403,7 @@ export default function CalendarView({
           scope={formScope}
           event={editing}
           defaults={formDefaults}
+          use12Hour={timeFormat === "12h"}
           categories={formCategories}
           onDone={(changed) => {
             setShowForm(false);
@@ -408,6 +440,7 @@ export default function CalendarView({
               onChanged={onEventsChanged}
               onEdit={openEdit}
               empty={t("calendar.overview.noUpcoming")}
+              use12Hour={timeFormat === "12h"}
             />
             {past.length > 0 && (
               <details className="group">
@@ -424,6 +457,7 @@ export default function CalendarView({
                     onEdit={openEdit}
                     empty=""
                     dim
+                    use12Hour={timeFormat === "12h"}
                   />
                 </div>
               </details>
@@ -440,6 +474,7 @@ export default function CalendarView({
           pageScope={scope}
           onAdd={() => openCreateForDay(dayViewDate)}
           onEdit={openEdit}
+          use12Hour={timeFormat === "12h"}
         />
       ) : (
         <div className="card p-3 sm:p-5">
@@ -485,6 +520,7 @@ export default function CalendarView({
                         onEdit={() => openEdit(ev)}
                         dim={false}
                         anchorDay={selectedDay}
+                        use12Hour={timeFormat === "12h"}
                       />
                     ))}
                     {dayTripItems.map((it) => (
@@ -789,6 +825,7 @@ function EventSection({
   onEdit,
   empty,
   dim = false,
+  use12Hour,
 }: {
   title: string;
   events: CalendarEvent[];
@@ -798,6 +835,7 @@ function EventSection({
   onEdit: (ev: CalendarEvent) => void;
   empty: string;
   dim?: boolean;
+  use12Hour: boolean;
 }) {
   return (
     <section>
@@ -819,6 +857,7 @@ function EventSection({
               onChanged={onChanged}
               onEdit={() => onEdit(ev)}
               dim={dim}
+              use12Hour={use12Hour}
             />
           ))}
         </ul>
@@ -835,6 +874,7 @@ function EventCard({
   onEdit,
   dim,
   anchorDay,
+  use12Hour,
 }: {
   event: CalendarEvent;
   pageScope: CalendarScope;
@@ -844,6 +884,7 @@ function EventCard({
   dim: boolean;
   /** When rendered for a specific day, show `HH:MM` if the event starts/ends that day. */
   anchorDay?: Date;
+  use12Hour: boolean;
 }) {
   const { t } = useTranslation();
   const confirm = useConfirm();
@@ -870,21 +911,25 @@ function EventCard({
       when = t("calendar.overview.allDay");
     } else if (startsToday && endsToday) {
       when = endDate
-        ? `${formatTime(event.starts_at)} \u2013 ${formatTime(event.ends_at!)}`
-        : formatTime(event.starts_at);
+        ? `${formatTimeWithPreference(event.starts_at, use12Hour)} \u2013 ${formatTimeWithPreference(event.ends_at!, use12Hour)}`
+        : formatTimeWithPreference(event.starts_at, use12Hour);
     } else if (startsToday) {
-      when = `${formatTime(event.starts_at)} \u2013 ...`;
+      when = `${formatTimeWithPreference(event.starts_at, use12Hour)} \u2013 ...`;
     } else if (endsToday && endDate) {
-      when = `... \u2013 ${formatTime(event.ends_at!)}`;
+      when = `... \u2013 ${formatTimeWithPreference(event.ends_at!, use12Hour)}`;
     } else {
       when = t("calendar.overview.allDay");
     }
   } else {
-    const startText = formatDateTime(event.starts_at, event.all_day);
+    const startText = formatDateTimeWithPreference(
+      event.starts_at,
+      event.all_day,
+      use12Hour,
+    );
     const endText = endDate
       ? sameDay && !event.all_day
-        ? formatTime(event.ends_at!)
-        : formatDateTime(event.ends_at!, event.all_day)
+        ? formatTimeWithPreference(event.ends_at!, use12Hour)
+        : formatDateTimeWithPreference(event.ends_at!, event.all_day, use12Hour)
       : null;
     when = `${startText}${endText ? ` \u2013 ${endText}` : ""}`;
   }
@@ -1089,6 +1134,7 @@ function DayPanel({
   pageScope,
   onAdd,
   onEdit,
+  use12Hour,
 }: {
   date: Date;
   onDateChange: (d: Date) => void;
@@ -1098,6 +1144,7 @@ function DayPanel({
   pageScope: CalendarScope;
   onAdd: () => void;
   onEdit: (ev: CalendarEvent) => void;
+  use12Hour: boolean;
 }) {
   const groupTripLink = pageScope.kind === "group" ? pageScope.groupId : null;
   const { t } = useTranslation();
@@ -1261,7 +1308,7 @@ function DayPanel({
                 style={{ top: `${(h - START_HOUR) * HOUR_PX}px` }}
               >
                 <div className="w-12 shrink-0 -translate-y-2 pl-2 text-[10px] tabular-nums text-slate-500 dark:text-slate-400">
-                  {h < 24 ? `${String(h).padStart(2, "0")}:00` : ""}
+                  {h < 24 ? formatHourLabel(h, use12Hour) : ""}
                 </div>
               </div>
             ))}
@@ -1296,8 +1343,10 @@ function DayPanel({
                   <>
                     <span className="flex items-center gap-1 font-semibold">
                       {personal && <Lock className="h-3 w-3" />}
-                      {formatTime(ev.starts_at)}
-                      {ev.ends_at ? ` \u2013 ${formatTime(ev.ends_at)}` : ""}
+                      {formatTimeWithPreference(ev.starts_at, use12Hour)}
+                      {ev.ends_at
+                        ? ` \u2013 ${formatTimeWithPreference(ev.ends_at, use12Hour)}`
+                        : ""}
                     </span>
                     <span className="block truncate">{ev.title}</span>
                     {ev.location && (
@@ -1380,12 +1429,14 @@ function EventForm({
   scope,
   event,
   defaults,
+  use12Hour,
   categories,
   onDone,
 }: {
   scope: CalendarScope;
   event: CalendarEvent | null;
   defaults: { date?: string } | null;
+  use12Hour: boolean;
   categories: CalendarCategory[];
   onDone: (changed: boolean) => void;
 }) {
@@ -1407,8 +1458,11 @@ function EventForm({
 
   const initialEnd = useMemo(() => {
     if (event?.ends_at) return splitIsoLocal(event.ends_at);
+    if (!event && initial.date && initial.time) {
+      return addMinutesToLocal(initial.date, initial.time, 60);
+    }
     return { date: "", time: "" };
-  }, [event]);
+  }, [event, initial]);
 
   const [title, setTitle] = useState(event?.title ?? "");
   const [description, setDescription] = useState(event?.description ?? "");
@@ -1418,19 +1472,21 @@ function EventForm({
   const [startTime, setStartTime] = useState(initial.time);
   const [endDate, setEndDate] = useState(initialEnd.date);
   const [endTime, setEndTime] = useState(initialEnd.time);
+  const [endTouched, setEndTouched] = useState(!!event?.ends_at);
   const [categoryId, setCategoryId] = useState<string>(
     event?.category?.id ?? "",
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  /** New events: mirror end date to start until the user has chosen an end date. */
+  /** New events: keep a default end of start +1h until manually changed. */
   useEffect(() => {
     if (event) return;
-    if (startDate && !endDate) {
-      setEndDate(startDate);
-    }
-  }, [event, startDate, endDate]);
+    if (!startDate || !startTime || endTouched || allDay) return;
+    const plusOneHour = addMinutesToLocal(startDate, startTime, 60);
+    setEndDate(plusOneHour.date);
+    setEndTime(plusOneHour.time);
+  }, [event, startDate, startTime, endTouched, allDay]);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -1541,14 +1597,29 @@ function EventForm({
             <label className="label" htmlFor="ev_start_time">
               {t("calendar.overview.startTime")}
             </label>
-            <input
-              id="ev_start_time"
-              type="time"
-              required
-              className="input tabular-nums"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-            />
+            {use12Hour ? (
+              <input
+                id="ev_start_time"
+                type="time"
+                required
+                className="input tabular-nums"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+              />
+            ) : (
+              <input
+                id="ev_start_time"
+                type="text"
+                required
+                inputMode="numeric"
+                pattern="^([01]\d|2[0-3]):[0-5]\d$"
+                title="HH:MM (24h)"
+                placeholder="HH:MM"
+                className="input tabular-nums"
+                value={startTime}
+                onChange={(e) => setStartTime(normalizeTimeInput(e.target.value))}
+              />
+            )}
           </div>
         )}
       </div>
@@ -1566,7 +1637,10 @@ function EventForm({
             min={startDate || undefined}
             aria-label={t("calendar.overview.endDate")}
             placeholder={t("calendar.overview.endOptional")}
-            onChange={(e) => setEndDate(e.target.value)}
+            onChange={(e) => {
+              setEndTouched(true);
+              setEndDate(e.target.value);
+            }}
           />
         </div>
         {!allDay && (
@@ -1574,14 +1648,35 @@ function EventForm({
             <label className="label" htmlFor="ev_end_time">
               {t("calendar.overview.endTime")}
             </label>
-            <input
-              id="ev_end_time"
-              type="time"
-              className="input tabular-nums"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-              disabled={!endDate}
-            />
+            {use12Hour ? (
+              <input
+                id="ev_end_time"
+                type="time"
+                className="input tabular-nums"
+                value={endTime}
+                onChange={(e) => {
+                  setEndTouched(true);
+                  setEndTime(e.target.value);
+                }}
+                disabled={!endDate}
+              />
+            ) : (
+              <input
+                id="ev_end_time"
+                type="text"
+                inputMode="numeric"
+                pattern="^([01]\d|2[0-3]):[0-5]\d$"
+                title="HH:MM (24h)"
+                placeholder="HH:MM"
+                className="input tabular-nums"
+                value={endTime}
+                onChange={(e) => {
+                  setEndTouched(true);
+                  setEndTime(normalizeTimeInput(e.target.value));
+                }}
+                disabled={!endDate}
+              />
+            )}
           </div>
         )}
       </div>
@@ -1696,6 +1791,85 @@ function composeIso(dateKey: string, timeKey: string): string | null {
   );
   if (Number.isNaN(d.getTime())) return null;
   return d.toISOString();
+}
+
+function loadTimeFormatPref(): TimeFormatPref {
+  try {
+    const raw = localStorage.getItem(TIME_FORMAT_KEY);
+    return raw === "12h" ? "12h" : "24h";
+  } catch {
+    return "24h";
+  }
+}
+
+function saveTimeFormatPref(v: TimeFormatPref): void {
+  try {
+    localStorage.setItem(TIME_FORMAT_KEY, v);
+  } catch {
+    // ignore
+  }
+}
+
+function formatTimeWithPreference(iso: string, use12Hour: boolean): string {
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: use12Hour,
+    }).format(new Date(iso));
+  } catch {
+    return formatTime(iso);
+  }
+}
+
+function formatDateTimeWithPreference(
+  iso: string,
+  allDay: boolean,
+  use12Hour: boolean,
+): string {
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      weekday: "short",
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      ...(allDay
+        ? {}
+        : {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: use12Hour,
+          }),
+    }).format(new Date(iso));
+  } catch {
+    return formatDateTime(iso, allDay);
+  }
+}
+
+function formatHourLabel(hour: number, use12Hour: boolean): string {
+  if (!use12Hour) return `${String(hour).padStart(2, "0")}:00`;
+  const suffix = hour >= 12 ? "PM" : "AM";
+  const h = hour % 12 === 0 ? 12 : hour % 12;
+  return `${h} ${suffix}`;
+}
+
+function addMinutesToLocal(
+  dateKey: string,
+  timeKey: string,
+  minutes: number,
+): { date: string; time: string } {
+  const iso = composeIso(dateKey, timeKey);
+  if (!iso) return { date: dateKey, time: timeKey };
+  const d = new Date(iso);
+  d.setMinutes(d.getMinutes() + minutes);
+  return { date: toDateKey(d), time: toTimeKey(d) };
+}
+
+function normalizeTimeInput(raw: string): string {
+  const cleaned = raw.replace(/[^\d:]/g, "").slice(0, 5);
+  if (cleaned.length <= 2) return cleaned;
+  if (cleaned.includes(":")) return cleaned;
+  return `${cleaned.slice(0, 2)}:${cleaned.slice(2)}`;
 }
 
 /** Tailwind bg class chosen for a MonthCalendar badge based on the
