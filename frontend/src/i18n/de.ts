@@ -474,9 +474,9 @@ const de: Translations = {
     ownerActionsHint:
       "Als Owner kannst du die Gruppe löschen. Wenn du verlässt, geht die Owner-Rolle an das nächste Mitglied über.",
     more: {
-      title: "Mehr folgt",
+      title: "Weitere Tools folgen bald",
       description:
-        "Weitere Tools (Tippspiel, Wichteln, Putzplan, ...) können als Module ergänzt werden. Siehe README.",
+        "Wir arbeiten an neuen Tools für deine Gruppe. Bleib gespannt!",
     },
     toolFavorite: {
       add: "Oben anpinnen",

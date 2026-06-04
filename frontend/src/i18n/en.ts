@@ -471,9 +471,9 @@ const en = {
     ownerActionsHint:
       "As owner you can delete the group. Leaving transfers ownership to the next member.",
     more: {
-      title: "More coming",
+      title: "More tools coming soon",
       description:
-        "Tools like a betting pool, secret santa or a chore rotation can be added as modules. See the README.",
+        "We're working on new tools for your group. Stay tuned!",
     },
     toolFavorite: {
       add: "Pin to top",

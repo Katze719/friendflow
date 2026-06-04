@@ -58,7 +58,12 @@ export default function Landing() {
 
       <footer className="relative border-t border-slate-200/70 bg-white/60 dark:border-slate-800/70 dark:bg-slate-950/60">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-safe py-6 text-xs text-slate-500 sm:flex-row dark:text-slate-400">
-          <span>{t("layout.footer")}</span>
+          <span>
+            {t("layout.footer")}
+            <span className="ml-2 text-slate-400 dark:text-slate-500">
+              v{__APP_VERSION__}
+            </span>
+          </span>
           <div className="flex items-center gap-4">
             <a
               href={GITHUB_URL}
