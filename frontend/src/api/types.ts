@@ -302,6 +302,88 @@ export interface Task {
   updated_at: string;
 }
 
+export type TournamentFormat = "points" | "elimination";
+export type TournamentStatus = "setup" | "active" | "completed";
+
+export interface TournamentSummary {
+  id: string;
+  name: string;
+  format: TournamentFormat;
+  team_mode: boolean;
+  team_size: number | null;
+  status: TournamentStatus;
+  participant_count: number;
+  created_at: string;
+}
+
+export interface TournamentParticipant {
+  id: string;
+  /** Null for name-only guests. */
+  user_id: string | null;
+  display_name: string;
+  /** Null when on the bench (not assigned to a team). */
+  team_id: string | null;
+  position: number;
+}
+
+export interface TournamentTeam {
+  id: string;
+  name: string;
+  position: number;
+  /** Ids of the participants on this team. */
+  member_ids: string[];
+}
+
+export interface TournamentEntrant {
+  id: string;
+  kind: "participant" | "team";
+  participant_id: string | null;
+  team_id: string | null;
+  display_name: string;
+  seed: number;
+}
+
+export interface TournamentMatch {
+  id: string;
+  round: number;
+  match_index: number;
+  entrant_a_id: string | null;
+  entrant_b_id: string | null;
+  score_a: number | null;
+  score_b: number | null;
+  winner_entrant_id: string | null;
+  status: "pending" | "done";
+  next_match_id: string | null;
+  next_slot: "a" | "b" | null;
+}
+
+export interface TournamentStanding {
+  entrant_id: string;
+  display_name: string;
+  played: number;
+  wins: number;
+  draws: number;
+  losses: number;
+  points: number;
+}
+
+export interface TournamentDetail {
+  id: string;
+  group_id: string;
+  name: string;
+  format: TournamentFormat;
+  team_mode: boolean;
+  team_size: number | null;
+  status: TournamentStatus;
+  created_by: string;
+  created_at: string;
+  participants: TournamentParticipant[];
+  teams: TournamentTeam[];
+  entrants: TournamentEntrant[];
+  matches: TournamentMatch[];
+  standings: TournamentStanding[];
+}
+
 export interface AdminUserRow {
   id: string;
   email: string;

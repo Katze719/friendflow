@@ -22,6 +22,7 @@ mod cli;
 mod config;
 mod db;
 mod error;
+mod games;
 mod groups;
 mod google_calendar;
 mod mail;

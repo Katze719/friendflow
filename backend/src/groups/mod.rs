@@ -22,6 +22,7 @@ pub fn routes() -> Router<AppState> {
         .nest("/:id/calendar", crate::calendar::routes())
         .nest("/:id/shopping", crate::shopping::routes())
         .nest("/:id/tasks", crate::tasks::routes())
+        .nest("/:id/games", crate::games::routes())
 }
 
 /// Returns Ok if the user is a member of the group, else Forbidden / NotFound.

@@ -4,10 +4,13 @@ import {
   ClipboardList,
   Plane,
   ShoppingBasket,
+  Trophy,
   Wallet,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import CalendarOverviewPage from "./calendar/OverviewPage";
+import GamesOverviewPage from "./games/GamesOverviewPage";
+import TournamentDetailPage from "./games/TournamentDetailPage";
 import ShoppingListsPage from "./shopping/ListsPage";
 import ShoppingOverviewPage from "./shopping/OverviewPage";
 import SplitwiseOverviewPage from "./splitwise/OverviewPage";
@@ -34,6 +37,8 @@ export interface Tool {
   icon: LucideIcon;
   /** Tailwind utility classes for the tool tile accent. */
   accent: string;
+  /** Marks the tool as still experimental (shows a badge in the UI). */
+  experimental?: boolean;
   routes: ToolRoute[];
 }
 
@@ -70,6 +75,7 @@ export const tools: Tool[] = [
     basePath: "calendar",
     icon: CalendarDays,
     accent: "bg-violet-500",
+    experimental: true,
     routes: [{ path: "/", component: CalendarOverviewPage }],
   },
   {
@@ -92,6 +98,19 @@ export const tools: Tool[] = [
     icon: ClipboardList,
     accent: "bg-rose-500",
     routes: [{ path: "/", component: TasksOverviewPage }],
+  },
+  {
+    id: "games",
+    nameKey: "tools.games.name",
+    descriptionKey: "tools.games.description",
+    basePath: "games",
+    icon: Trophy,
+    accent: "bg-indigo-500",
+    experimental: true,
+    routes: [
+      { path: "/", component: GamesOverviewPage },
+      { path: "/tournaments/:tournamentId", component: TournamentDetailPage },
+    ],
   },
 ];
 

@@ -174,6 +174,7 @@ export default function Dashboard() {
             description={t("dashboard.googleCalendarDescription")}
             icon={<CalendarPlus className="h-5 w-5" />}
             iconBg="bg-blue-600"
+            experimental
           />
         </ul>
       </section>
@@ -202,12 +203,14 @@ function PersonalToolCard({
   description,
   icon,
   iconBg,
+  experimental = false,
 }: {
   to: string;
   title: string;
   description: string;
   icon: React.ReactNode;
   iconBg: string;
+  experimental?: boolean;
 }) {
   const { t } = useTranslation();
   return (
@@ -216,7 +219,7 @@ function PersonalToolCard({
         to={to}
         className="card group flex h-full flex-col gap-4 p-5 transition hover:-translate-y-0.5 hover:shadow-md"
       >
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span
             className={`inline-flex h-10 w-10 items-center justify-center rounded-xl text-white ${iconBg}`}
           >
@@ -225,6 +228,11 @@ function PersonalToolCard({
           <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
             {title}
           </h3>
+          {experimental && (
+            <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+              {t("group.experimental")}
+            </span>
+          )}
         </div>
         <p className="text-sm text-slate-600 dark:text-slate-300">
           {description}

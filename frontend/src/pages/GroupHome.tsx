@@ -202,7 +202,7 @@ export default function GroupHome() {
                   to={toolPath(group.id, tool)}
                   className="card group flex h-full flex-col gap-4 p-5 transition hover:-translate-y-0.5 hover:shadow-md"
                 >
-                  <div className="flex items-center gap-3 pr-8">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pr-8">
                     <span
                       className={`inline-flex h-10 w-10 items-center justify-center rounded-xl text-white ${tool.accent}`}
                     >
@@ -211,6 +211,11 @@ export default function GroupHome() {
                     <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                       {t(tool.nameKey)}
                     </h3>
+                    {tool.experimental && (
+                      <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                        {t("group.experimental")}
+                      </span>
+                    )}
                   </div>
                   <p className="text-sm text-slate-600 dark:text-slate-300">
                     {t(tool.descriptionKey)}

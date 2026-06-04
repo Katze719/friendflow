@@ -94,9 +94,14 @@ export default function GoogleCalendarIntegration() {
             <CalendarPlus className="h-6 w-6" />
           </span>
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">
-              {t("integrations.googleCalendar.title")}
-            </h1>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <h1 className="text-2xl font-semibold tracking-tight">
+                {t("integrations.googleCalendar.title")}
+              </h1>
+              <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                {t("group.experimental")}
+              </span>
+            </div>
             <p className="mt-1 text-slate-600 dark:text-slate-400">
               {t("integrations.googleCalendar.subtitle")}
             </p>
