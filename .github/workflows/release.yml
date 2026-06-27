@@ -1,0 +1,220 @@
+name: Release Assets
+
+on:
+  release:
+    types:
+      - published
+
+permissions:
+  contents: write
+
+jobs:
+  backend-linux:
+    name: Backend Linux Artifact
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend -> target
+
+      - name: Build backend release binary
+        run: cargo build --release
+
+      - name: Package backend artifact
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          PACKAGE_ROOT="friendflow-backend-${TAG}-linux-x86_64"
+          mkdir -p "../release-assets/${PACKAGE_ROOT}"
+          cp target/release/friendflow-backend "../release-assets/${PACKAGE_ROOT}/"
+          cp ../README.md "../release-assets/${PACKAGE_ROOT}/"
+          cp ../.env.example "../release-assets/${PACKAGE_ROOT}/"
+          tar -C ../release-assets -czf "../release-assets/${PACKAGE_ROOT}.tar.gz" "${PACKAGE_ROOT}"
+
+      - name: Upload backend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-backend-linux
+          path: release-assets/*.tar.gz
+          if-no-files-found: error
+
+  frontend-web:
+    name: Frontend Web Artifact
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Package frontend artifact
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          PACKAGE_ROOT="friendflow-frontend-${TAG}-dist"
+          mkdir -p "../release-assets/${PACKAGE_ROOT}"
+          cp -R dist/. "../release-assets/${PACKAGE_ROOT}/"
+          cp ../README.md "../release-assets/${PACKAGE_ROOT}/"
+          tar -C ../release-assets -czf "../release-assets/${PACKAGE_ROOT}.tar.gz" "${PACKAGE_ROOT}"
+
+      - name: Upload frontend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-frontend-web
+          path: release-assets/*.tar.gz
+          if-no-files-found: error
+
+  android-debug:
+    name: Android Debug Artifact
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Sync Capacitor assets
+        run: npm run mobile:build
+
+      - name: Build debug APK
+        run: |
+          chmod +x android/gradlew
+          cd android
+          ./gradlew assembleDebug
+
+      - name: Copy Android artifact
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          mkdir -p ../release-assets
+          cp android/app/build/outputs/apk/debug/app-debug.apk "../release-assets/friendflow-android-${TAG}-debug.apk"
+
+      - name: Upload Android artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-android-debug
+          path: release-assets/*.apk
+          if-no-files-found: error
+
+  ios-simulator:
+    name: iOS Simulator Artifact
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Sync Capacitor assets
+        run: npm run mobile:build
+
+      - name: Install CocoaPods dependencies
+        run: pod install
+        working-directory: frontend/ios/App
+
+      - name: Build iOS simulator app
+        run: |
+          xcodebuild \
+            -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath ios/build \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Copy iOS artifact
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          mkdir -p ../release-assets
+          cd ios/build/Build/Products/Debug-iphonesimulator
+          ditto -c -k --sequesterRsrc --keepParent App.app "../../../../../../release-assets/friendflow-ios-${TAG}-simulator-app.zip"
+
+      - name: Upload iOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-ios-simulator
+          path: release-assets/*.zip
+          if-no-files-found: error
+
+  attach:
+    name: Attach Assets To Release
+    runs-on: ubuntu-latest
+    needs:
+      - backend-linux
+      - frontend-web
+      - android-debug
+      - ios-simulator
+    steps:
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Attach assets to GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          overwrite_files: true
+          files: |
+            release-assets/*.tar.gz
+            release-assets/*.apk
+            release-assets/*.zip
