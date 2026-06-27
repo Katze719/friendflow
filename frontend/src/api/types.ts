@@ -18,6 +18,12 @@ export interface RegisterResponse {
   user: User;
 }
 
+export interface AuthConfig {
+  registration_mode: "approval" | "open";
+  password_reset_enabled?: boolean;
+  instance_name?: string;
+}
+
 export interface GroupSummary {
   id: string;
   name: string;

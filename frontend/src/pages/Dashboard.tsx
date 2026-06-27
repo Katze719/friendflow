@@ -16,6 +16,7 @@ import { groupsApi } from "../api/groups";
 import type { GroupSummary } from "../api/types";
 import LoadingState from "../components/LoadingState";
 import { useAuth } from "../context/AuthContext";
+import { readInstanceStorage, writeInstanceStorage } from "../lib/instances";
 
 /**
  * localStorage key for the cached groups list. Lets the dashboard paint the
@@ -26,11 +27,9 @@ import { useAuth } from "../context/AuthContext";
  * dashboard-level caches, clear them there too so logout doesn't leak
  * data across sessions.
  */
-const GROUPS_CACHE_KEY = "friendflow.groups";
-
 function readCachedGroups(): GroupSummary[] | null {
   try {
-    const raw = localStorage.getItem(GROUPS_CACHE_KEY);
+    const raw = readInstanceStorage("groups");
     if (!raw) return null;
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return null;
@@ -54,8 +53,7 @@ function readCachedGroups(): GroupSummary[] | null {
 
 function writeCachedGroups(groups: GroupSummary[] | null): void {
   try {
-    if (groups) localStorage.setItem(GROUPS_CACHE_KEY, JSON.stringify(groups));
-    else localStorage.removeItem(GROUPS_CACHE_KEY);
+    writeInstanceStorage("groups", groups ? JSON.stringify(groups) : null);
   } catch {
     /* ignore */
   }

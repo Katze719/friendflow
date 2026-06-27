@@ -38,7 +38,7 @@ shopping lists - and is designed so you can bolt on more as independent modules.
 - [Adding a new tool](#adding-a-new-tool)
 - [Internationalisation](#internationalisation)
 - [Security](#security)
-- [Later: Tauri v2 desktop/mobile app](#later-tauri-v2-desktopmobile-app)
+- [Mobile app (Capacitor)](#mobile-app-capacitor)
 - [License](#license)
 
 ---
@@ -111,7 +111,8 @@ deployments need:
 | `POSTGRES_DB`        | `friendflow`   | Postgres database name.                                                                                                                                                 |
 | `JWT_SECRET`         | -              | Min. 32 chars. `bootstrap.sh` generates one for you.                                                                                                                    |
 | `JWT_EXPIRY_HOURS`   | `168`          | How long login tokens stay valid.                                                                                                                                       |
-| `CORS_ORIGIN`        | localhost:8080 | Comma-separated list of allowed origins. Set this to your public URL in production.                                                                                     |
+| `CORS_ORIGIN`        | localhost:8080 | Comma-separated list of allowed origins. Set this to your public URL in production. The backend also whitelists Capacitor's default local app origins automatically.   |
+| `INSTANCE_NAME`      | `friendflow`   | Public instance label shown on auth screens and used as the display name when mobile clients validate this server.                                                      |
 | `REGISTRATION_MODE`  | `approval`     | `approval` = new sign-ups wait for an admin; `open` = new sign-ups are auto-approved and can log in immediately.                                                        |
 | `APP_BASE_URL`       | first `CORS_ORIGIN` | Public URL of the frontend. Used to build clickable links in outbound emails (currently only password reset).                                                     |
 | `SMTP_HOST`          | *(empty)*      | Hostname of the SMTP relay for transactional emails. Leaving it empty disables password recovery; the "Forgot password?" link won't appear on the login screen.         |
@@ -121,7 +122,9 @@ deployments need:
 | `SMTP_PASSWORD`      | *(empty)*      | Optional SMTP auth password / API key.                                                                                                                                  |
 | `SMTP_FROM`          | -              | Mandatory when SMTP is enabled. Bare address (`noreply@example.com`) or full mailbox (`friendflow <noreply@example.com>`).                                              |
 | `LANDING_MODE`       | `login`        | `login` = unauthenticated visitors are sent straight to the sign-in form; `landing` = they see a public marketing page explaining friendflow, with sign-in / sign-up in the top right. |
-| `VITE_API_URL`       | *(empty)*      | Leave empty when running the bundled nginx proxy. Only set for non-docker dev or a Tauri build.                                                                         |
+| `VITE_API_URL`       | *(empty)*      | Leave empty when running the bundled nginx proxy. Only set for non-docker dev or when packaging a remote API into a native shell.                                       |
+| `VITE_DEFAULT_INSTANCE_URL` | *(empty)* | Optional default server root URL for Capacitor/mobile builds. When unset, the web app falls back to same-origin.                                                        |
+| `VITE_DEFAULT_INSTANCE_LABEL` | `friendflow` | Label shown for the default mobile login target.                                                                                                                     |
 | `RUST_LOG`           | `info`         | Standard `tracing`/`env_logger` filter string.                                                                                                                          |
 
 > `REGISTRATION_MODE` and `LANDING_MODE` pair up nicely: for a private
@@ -283,11 +286,17 @@ can stay HTTP-only in that case.
 - **CORS**: configurable via `CORS_ORIGIN` (comma-separated list of
   allowed origins, or leave unset during local same-origin development).
 
-## Later: Tauri v2 desktop/mobile app
+## Mobile app (Capacitor)
 
-The frontend is a standard SPA and can be embedded in Tauri v2 without
-changes. Set `VITE_API_URL` at build time to point the app at your
-production backend.
+The frontend stays a standard SPA and now supports runtime instance
+selection for native shells. For Capacitor/mobile builds, set
+`VITE_DEFAULT_INSTANCE_URL` to the public friendflow server that should be
+preselected on the login page. Users can still switch to their own
+private instance from a secondary button in the auth flow.
+
+Optional native packaging overrides:
+- `CAPACITOR_APP_ID` for the Android/iOS bundle id
+- `CAPACITOR_APP_NAME` for the app name shown by the native shell
 
 ## License
 

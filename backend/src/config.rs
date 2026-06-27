@@ -85,6 +85,7 @@ pub struct Config {
     pub jwt_expiry_hours: i64,
     pub bind_addr: String,
     pub cors_origin: String,
+    pub instance_name: String,
     pub registration_mode: RegistrationMode,
     /// Absolute public base URL of the frontend (e.g.
     /// `https://friendflow.example`), used to construct clickable
@@ -115,6 +116,11 @@ impl Config {
         let bind_addr = std::env::var("BIND_ADDR").unwrap_or_else(|_| "0.0.0.0:3000".to_string());
         let cors_origin =
             std::env::var("CORS_ORIGIN").unwrap_or_else(|_| "http://localhost:8080".to_string());
+        let instance_name = std::env::var("INSTANCE_NAME")
+            .ok()
+            .map(|v| v.trim().to_string())
+            .filter(|v| !v.is_empty())
+            .unwrap_or_else(|| "friendflow".to_string());
 
         let registration_mode = match std::env::var("REGISTRATION_MODE") {
             Ok(raw) if !raw.trim().is_empty() => RegistrationMode::parse(&raw).with_context(|| {
@@ -154,6 +160,7 @@ impl Config {
             jwt_expiry_hours,
             bind_addr,
             cors_origin,
+            instance_name,
             registration_mode,
             app_base_url,
             smtp,

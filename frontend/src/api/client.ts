@@ -1,14 +1,11 @@
-const TOKEN_KEY = "friendflow.token";
-
-const BASE_URL = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
+import { buildApiUrl, getActiveInstance, readInstanceStorage, writeInstanceStorage } from "../lib/instances";
 
 export function getToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY);
+  return readInstanceStorage("token");
 }
 
 export function setToken(token: string | null): void {
-  if (token) localStorage.setItem(TOKEN_KEY, token);
-  else localStorage.removeItem(TOKEN_KEY);
+  writeInstanceStorage("token", token);
 }
 
 export class ApiError extends Error {
@@ -38,7 +35,7 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
     if (token) headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const url = `${BASE_URL}${path}`;
+  const url = buildApiUrl(getActiveInstance().baseUrl, path);
   const res = await fetch(url, {
     method,
     headers,

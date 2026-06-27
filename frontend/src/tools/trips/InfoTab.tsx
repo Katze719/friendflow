@@ -94,7 +94,7 @@ export default function InfoTab({
 
   const lastSentSigRef = useRef<string | null>(null);
   const saveGenRef = useRef(0);
-  const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autosaveTimerRef = useRef<number | null>(null);
   const onTripChangedRef = useRef(onTripChanged);
   onTripChangedRef.current = onTripChanged;
 

@@ -7,9 +7,15 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "cap:copy": "npx cap copy",
+    "cap:sync": "npx cap sync",
+    "cap:open:android": "npx cap open android",
+    "cap:open:ios": "npx cap open ios",
+    "mobile:build": "npm run build && npm run cap:sync"
   },
   "dependencies": {
+    "@capacitor/core": "^7.4.3",
     "clsx": "^2.1.1",
     "i18next": "^26.0.5",
     "i18next-browser-languagedetector": "^8.2.1",
@@ -22,6 +28,9 @@
     "react-router-dom": "^6.26.2"
   },
   "devDependencies": {
+    "@capacitor/android": "^7.4.3",
+    "@capacitor/cli": "^7.4.3",
+    "@capacitor/ios": "^7.4.3",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.3",

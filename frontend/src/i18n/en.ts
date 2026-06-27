@@ -358,6 +358,24 @@ const en = {
       password: "Password",
       displayName: "Display name",
     },
+    instance: {
+      title: "Choose instance",
+      subtitle:
+        "Keep login simple by default, or point the app at your own private friendflow server.",
+      switchAction: "Other instance",
+      currentAction: "Instance: {{label}}",
+      activeLabel: "Current instance",
+      defaultHint: "The standard app login target.",
+      defaultSelected: "Selected",
+      useDefault: "Use {{label}}",
+      customLabel: "Private / own instance",
+      customHint: "Enter the public root URL of your friendflow installation.",
+      useCustom: "Use this instance",
+      validating: "Checking instance...",
+      invalidUrl: "Enter a valid instance URL. Use https:// for remote servers.",
+      unreachable:
+        "This instance could not be reached or does not look like a compatible friendflow server.",
+    },
   },
   pending: {
     title: "Waiting for approval",

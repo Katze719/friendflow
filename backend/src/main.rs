@@ -116,12 +116,18 @@ async fn warn_if_no_admin(pool: &sqlx::PgPool) {
 }
 
 fn build_cors(origin: &str) -> CorsLayer {
-    let origins: Vec<HeaderValue> = origin
+    let mut origins: Vec<HeaderValue> = origin
         .split(',')
         .map(|s| s.trim())
         .filter(|s| !s.is_empty())
         .filter_map(|s| HeaderValue::from_str(s).ok())
         .collect();
+
+    for mobile_origin in ["capacitor://localhost", "http://localhost", "https://localhost"] {
+        if let Ok(value) = HeaderValue::from_str(mobile_origin) {
+            origins.push(value);
+        }
+    }
 
     let allow_origin = if origins.is_empty() {
         AllowOrigin::any()

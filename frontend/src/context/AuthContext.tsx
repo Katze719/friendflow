@@ -9,6 +9,12 @@ import {
 } from "react";
 import { api, getToken, setToken } from "../api/client";
 import type { LoginResponse, RegisterResponse, User } from "../api/types";
+import {
+  clearInstanceStorage,
+  readInstanceStorage,
+  useActiveInstance,
+  writeInstanceStorage,
+} from "../lib/instances";
 
 interface AuthContextValue {
   user: User | null;
@@ -29,11 +35,9 @@ const AuthContext = createContext<AuthContextValue | null>(null);
  * the token so the UI can render the "me" area (greeting, header, avatar)
  * synchronously on reload instead of waiting a round-trip every time.
  */
-const USER_CACHE_KEY = "friendflow.user";
-
 function readCachedUser(): User | null {
   try {
-    const raw = localStorage.getItem(USER_CACHE_KEY);
+    const raw = readInstanceStorage("user");
     if (!raw) return null;
     const parsed = JSON.parse(raw) as unknown;
     // Defensive: reject anything that doesn't at least look like a User.
@@ -55,8 +59,7 @@ function readCachedUser(): User | null {
 
 function writeCachedUser(user: User | null): void {
   try {
-    if (user) localStorage.setItem(USER_CACHE_KEY, JSON.stringify(user));
-    else localStorage.removeItem(USER_CACHE_KEY);
+    writeInstanceStorage("user", user ? JSON.stringify(user) : null);
   } catch {
     /* storage full / disabled - not worth crashing the app over */
   }
@@ -69,15 +72,12 @@ function writeCachedUser(user: User | null): void {
  * Dashboard group list; add new keys here as we introduce more caches.
  */
 export function clearAuthCaches(): void {
-  writeCachedUser(null);
-  try {
-    localStorage.removeItem("friendflow.groups");
-  } catch {
-    /* ignore */
-  }
+  clearInstanceStorage("user");
+  clearInstanceStorage("groups");
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const instance = useActiveInstance();
   // Hydrate user + loading synchronously from localStorage so the very first
   // render already has the right content when we have a valid-looking token.
   // The network revalidation below still runs; if the token is bad we'll
@@ -95,6 +95,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     const token = getToken();
+    const cachedUser = token ? readCachedUser() : null;
+    setUser(cachedUser);
+    setLoading(token ? cachedUser === null : false);
+
     if (!token) {
       // No token but maybe a stale cache from a previous session - drop it.
       clearAuthCaches();
@@ -119,7 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [instance.baseUrl, instance.kind]);
 
   const login = useCallback(async (email: string, password: string) => {
     const res = await api<LoginResponse>("/api/auth/login", {

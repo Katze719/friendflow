@@ -72,6 +72,7 @@ pub struct LoginResponse {
 #[derive(Debug, Serialize)]
 pub struct AuthConfigResponse {
     pub registration_mode: &'static str,
+    pub instance_name: String,
     /// Whether the instance has an outbound SMTP relay configured, so
     /// the UI knows whether to render the "forgot password?" link at
     /// all. Hiding the entry point on unconfigured instances saves
@@ -85,6 +86,7 @@ pub async fn config(State(state): State<AppState>) -> Json<AuthConfigResponse> {
             RegistrationMode::Approval => "approval",
             RegistrationMode::Open => "open",
         },
+        instance_name: state.cfg.instance_name.clone(),
         password_reset_enabled: state.cfg.smtp.is_some(),
     })
 }
