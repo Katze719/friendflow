@@ -18,6 +18,10 @@ export interface RegisterResponse {
   user: User;
 }
 
+export interface StatusResponse {
+  status: "ok";
+}
+
 export interface AuthConfig {
   registration_mode: "approval" | "open";
   password_reset_enabled?: boolean;

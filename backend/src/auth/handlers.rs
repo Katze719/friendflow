@@ -4,6 +4,7 @@ use chrono::{DateTime, Duration, Utc};
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use sqlx::error::ErrorKind;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -114,33 +115,33 @@ pub async fn register(
     // Depending on REGISTRATION_MODE either leave the user pending (default;
     // an admin has to approve them before they can log in) or auto-approve
     // them so they can start using the app immediately.
-    let row: (Uuid, String, String, String, bool, DateTime<Utc>) =
-        match state.cfg.registration_mode {
-            RegistrationMode::Approval => {
-                sqlx::query_as(
-                    "INSERT INTO users (email, display_name, password_hash)
+    let row: (Uuid, String, String, String, bool, DateTime<Utc>) = match state.cfg.registration_mode
+    {
+        RegistrationMode::Approval => {
+            sqlx::query_as(
+                "INSERT INTO users (email, display_name, password_hash)
                      VALUES ($1, $2, $3)
                      RETURNING id, email, display_name, status, is_admin, created_at",
-                )
-                .bind(&email)
-                .bind(&display_name)
-                .bind(&hash)
-                .fetch_one(&state.db)
-                .await?
-            }
-            RegistrationMode::Open => {
-                sqlx::query_as(
-                    "INSERT INTO users (email, display_name, password_hash, status, approved_at)
+            )
+            .bind(&email)
+            .bind(&display_name)
+            .bind(&hash)
+            .fetch_one(&state.db)
+            .await?
+        }
+        RegistrationMode::Open => {
+            sqlx::query_as(
+                "INSERT INTO users (email, display_name, password_hash, status, approved_at)
                      VALUES ($1, $2, $3, 'approved', NOW())
                      RETURNING id, email, display_name, status, is_admin, created_at",
-                )
-                .bind(&email)
-                .bind(&display_name)
-                .bind(&hash)
-                .fetch_one(&state.db)
-                .await?
-            }
-        };
+            )
+            .bind(&email)
+            .bind(&display_name)
+            .bind(&hash)
+            .fetch_one(&state.db)
+            .await?
+        }
+    };
 
     let user = UserResponse {
         id: row.0,
@@ -234,6 +235,36 @@ pub struct ResetPasswordRequest {
 
 #[derive(Debug, Serialize)]
 pub struct ResetPasswordResponse {
+    pub status: &'static str,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct UpdateMeRequest {
+    #[validate(length(min = 2, max = 64))]
+    pub display_name: String,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct ChangePasswordRequest {
+    #[validate(length(min = 1))]
+    pub current_password: String,
+    #[validate(length(min = 8, max = 200))]
+    pub new_password: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ChangePasswordResponse {
+    pub status: &'static str,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct DeleteMeRequest {
+    #[validate(length(min = 1))]
+    pub password: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DeleteMeResponse {
     pub status: &'static str,
 }
 
@@ -544,4 +575,110 @@ pub async fn me(State(state): State<AppState>, user: AuthUser) -> AppResult<Json
         is_admin,
         created_at,
     }))
+}
+
+pub async fn update_me(
+    State(state): State<AppState>,
+    user: AuthUser,
+    Json(payload): Json<UpdateMeRequest>,
+) -> AppResult<Json<UserResponse>> {
+    payload.validate()?;
+    let display_name = payload.display_name.trim();
+    if display_name.len() < 2 {
+        return Err(AppError::BadRequest(
+            "display name must be at least 2 characters".into(),
+        ));
+    }
+
+    let row: (Uuid, String, String, String, bool, DateTime<Utc>) = sqlx::query_as(
+        "UPDATE users
+         SET display_name = $1
+         WHERE id = $2
+         RETURNING id, email, display_name, status, is_admin, created_at",
+    )
+    .bind(display_name)
+    .bind(user.id)
+    .fetch_one(&state.db)
+    .await?;
+
+    Ok(Json(UserResponse {
+        id: row.0,
+        email: row.1,
+        display_name: row.2,
+        status: row.3,
+        is_admin: row.4,
+        created_at: row.5,
+    }))
+}
+
+pub async fn change_password(
+    State(state): State<AppState>,
+    user: AuthUser,
+    Json(payload): Json<ChangePasswordRequest>,
+) -> AppResult<Json<ChangePasswordResponse>> {
+    payload.validate()?;
+
+    let row: Option<(String,)> = sqlx::query_as("SELECT password_hash FROM users WHERE id = $1")
+        .bind(user.id)
+        .fetch_optional(&state.db)
+        .await?;
+
+    let Some((password_hash,)) = row else {
+        return Err(AppError::Unauthorized);
+    };
+
+    let ok = password::verify_password(&payload.current_password, &password_hash)
+        .map_err(|_| AppError::Unauthorized)?;
+    if !ok {
+        return Err(AppError::BadRequest("current password is incorrect".into()));
+    }
+
+    let new_hash = password::hash_password(&payload.new_password)
+        .map_err(|e| AppError::Internal(anyhow::anyhow!("hash error: {e}")))?;
+
+    sqlx::query("UPDATE users SET password_hash = $1 WHERE id = $2")
+        .bind(new_hash)
+        .bind(user.id)
+        .execute(&state.db)
+        .await?;
+
+    Ok(Json(ChangePasswordResponse { status: "ok" }))
+}
+
+pub async fn delete_me(
+    State(state): State<AppState>,
+    user: AuthUser,
+    Json(payload): Json<DeleteMeRequest>,
+) -> AppResult<Json<DeleteMeResponse>> {
+    payload.validate()?;
+
+    let row: Option<(String,)> = sqlx::query_as("SELECT password_hash FROM users WHERE id = $1")
+        .bind(user.id)
+        .fetch_optional(&state.db)
+        .await?;
+
+    let Some((password_hash,)) = row else {
+        return Err(AppError::Unauthorized);
+    };
+
+    let ok = password::verify_password(&payload.password, &password_hash)
+        .map_err(|_| AppError::Unauthorized)?;
+    if !ok {
+        return Err(AppError::BadRequest("password is incorrect".into()));
+    }
+
+    let result = sqlx::query("DELETE FROM users WHERE id = $1")
+        .bind(user.id)
+        .execute(&state.db)
+        .await;
+
+    match result {
+        Ok(_) => Ok(Json(DeleteMeResponse { status: "ok" })),
+        Err(sqlx::Error::Database(db_err)) if db_err.kind() == ErrorKind::ForeignKeyViolation => {
+            Err(AppError::Conflict(
+                "account cannot be deleted while it still owns shared data; remove or transfer those entries first".into(),
+            ))
+        }
+        Err(err) => Err(err.into()),
+    }
 }

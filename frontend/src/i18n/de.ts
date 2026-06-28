@@ -34,6 +34,7 @@ const de: Translations = {
   },
   layout: {
     signOut: "Abmelden",
+    account: "Konto",
     admin: "Admin",
     adminWithPending: "Admin ({{count}} offen)",
     menu: "Menü",
@@ -386,6 +387,41 @@ const de: Translations = {
     body: "Dein Konto wurde angelegt. Ein Admin muss es freischalten, bevor du dich anmelden kannst.",
     hint: "Frag die Person, die diese Instanz betreibt, ob sie dich freischaltet - danach kannst du dich anmelden.",
     loginLink: "Zur Anmeldung",
+  },
+  account: {
+    title: "Kontoeinstellungen",
+    subtitle: "Verwalte Profil, Passwort und den Status deines Kontos.",
+    profile: {
+      title: "Profil",
+      subtitle: "Ändere den Namen, den andere Leute in deinen Gruppen sehen.",
+      submit: "Profil speichern",
+      saved: "Profil aktualisiert.",
+      errors: {
+        displayNameShort: "Der Anzeigename muss mindestens 2 Zeichen haben.",
+      },
+    },
+    password: {
+      title: "Passwort",
+      subtitle: "Ändere dein Passwort direkt in der App.",
+      current: "Aktuelles Passwort",
+      submit: "Passwort ändern",
+      saved: "Passwort aktualisiert.",
+    },
+    delete: {
+      title: "Konto löschen",
+      subtitle: "Entfernt dieses Konto dauerhaft von dieser Instanz.",
+      warning:
+        "Das lässt sich nicht rückgängig machen. Rein persönliche Daten können automatisch entfernt werden, aber geteilte Gruppendaten können die Löschung blockieren, bis du sie entfernst oder übergibst.",
+      password: "Aktuelles Passwort",
+      submit: "Konto löschen",
+      confirmTitle: "Dieses Konto löschen?",
+      confirmBody:
+        "Dadurch wird dein Konto auf dieser Instanz dauerhaft entfernt. Wenn noch geteilte Inhalte dir gehören, kann die Löschung abgelehnt werden, bis du diese vorher bereinigst.",
+      deleted: "Konto gelöscht.",
+      errors: {
+        passwordRequired: "Gib dein aktuelles Passwort ein, um das Konto zu löschen.",
+      },
+    },
   },
   dashboard: {
     eyebrow: "Deine Gruppen",

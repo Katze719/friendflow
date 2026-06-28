@@ -1,4 +1,4 @@
-import { Home, LogOut, Shield } from "lucide-react";
+import { Home, LogOut, Settings, Shield } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -123,6 +123,15 @@ export default function Layout({ children }: { children: ReactNode }) {
             )}
             {user && (
               <>
+                <Link
+                  to="/me/settings"
+                  className="btn-ghost"
+                  aria-label={t("layout.account")}
+                  title={t("layout.account")}
+                >
+                  <Settings className="h-4 w-4" />
+                  <span className="hidden sm:inline">{t("layout.account")}</span>
+                </Link>
                 <span className="hidden text-sm text-slate-600 dark:text-slate-300 md:inline">
                   {user.display_name}
                 </span>

@@ -32,6 +32,7 @@ const en = {
   },
   layout: {
     signOut: "Sign out",
+    account: "Account",
     admin: "Admin",
     adminWithPending: "Admin ({{count}} pending)",
     menu: "Menu",
@@ -382,6 +383,41 @@ const en = {
     body: "Your account has been created. An admin needs to approve it before you can sign in.",
     hint: "Ask the person running this instance to approve your account - you will be able to sign in afterwards.",
     loginLink: "Back to sign in",
+  },
+  account: {
+    title: "Account settings",
+    subtitle: "Manage your profile, password and account lifecycle.",
+    profile: {
+      title: "Profile",
+      subtitle: "Update the name other people in your groups see.",
+      submit: "Save profile",
+      saved: "Profile updated.",
+      errors: {
+        displayNameShort: "Display name must be at least 2 characters.",
+      },
+    },
+    password: {
+      title: "Password",
+      subtitle: "Change your password without leaving the app.",
+      current: "Current password",
+      submit: "Change password",
+      saved: "Password updated.",
+    },
+    delete: {
+      title: "Delete account",
+      subtitle: "Permanently remove this account from this instance.",
+      warning:
+        "This cannot be undone. Personal-only data can be removed automatically, but shared group data may block deletion until you remove or transfer it.",
+      password: "Current password",
+      submit: "Delete account",
+      confirmTitle: "Delete this account?",
+      confirmBody:
+        "This permanently removes your account on this instance. If shared content still belongs to you, deletion may be refused until you clean that up first.",
+      deleted: "Account deleted.",
+      errors: {
+        passwordRequired: "Enter your current password to delete this account.",
+      },
+    },
   },
   dashboard: {
     eyebrow: "Your groups",

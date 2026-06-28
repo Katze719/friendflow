@@ -6,6 +6,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import { useAuth } from "./context/AuthContext";
 import { isLandingModeEnabled } from "./lib/landingMode";
 import AdminUsers from "./pages/AdminUsers";
+import AccountSettings from "./pages/AccountSettings";
 import Dashboard from "./pages/Dashboard";
 import ForgotPassword from "./pages/ForgotPassword";
 import GroupHome from "./pages/GroupHome";
@@ -69,6 +70,7 @@ export default function App() {
                   element={<PersonalShoppingList />}
                 />
                 <Route path="/me/tasks" element={<PersonalTasks />} />
+                <Route path="/me/settings" element={<AccountSettings />} />
                 <Route
                   path="/me/integrations/google-calendar"
                   element={<GoogleCalendarIntegration />}
