@@ -93,6 +93,8 @@ jobs:
         run: npm ci
 
       - name: Sync Capacitor assets
+        env:
+          VITE_DEFAULT_INSTANCE_URL: https://friendflow.site
         run: npm run mobile:build
 
       - name: Build debug APK
@@ -129,6 +131,8 @@ jobs:
         run: npm ci
 
       - name: Sync Capacitor assets
+        env:
+          VITE_DEFAULT_INSTANCE_URL: https://friendflow.site
         run: npm run mobile:build
 
       - name: Install CocoaPods dependencies

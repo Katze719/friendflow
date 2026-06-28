@@ -119,6 +119,8 @@ jobs:
         run: npm ci
 
       - name: Sync Capacitor assets
+        env:
+          VITE_DEFAULT_INSTANCE_URL: https://friendflow.site
         run: npm run mobile:build
 
       - name: Validate Android signing secrets
@@ -187,6 +189,8 @@ jobs:
         run: npm ci
 
       - name: Sync Capacitor assets
+        env:
+          VITE_DEFAULT_INSTANCE_URL: https://friendflow.site
         run: npm run mobile:build
 
       - name: Install CocoaPods dependencies
