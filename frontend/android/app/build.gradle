@@ -1,5 +1,27 @@
 apply plugin: 'com.android.application'
 
+def envOrProperty = { String key, String fallback = null ->
+    def fromProperty = project.findProperty(key)
+    if (fromProperty != null && fromProperty.toString().trim()) {
+        return fromProperty.toString().trim()
+    }
+    def fromEnv = System.getenv(key)
+    if (fromEnv != null && fromEnv.toString().trim()) {
+        return fromEnv.toString().trim()
+    }
+    return fallback
+}
+
+def releaseVersionCode = (envOrProperty('FRIENDFLOW_VERSION_CODE', '1')) as Integer
+def releaseVersionName = envOrProperty('FRIENDFLOW_VERSION_NAME', '1.0')
+def releaseStoreFile = envOrProperty('FRIENDFLOW_UPLOAD_STORE_FILE')
+def releaseStorePassword = envOrProperty('FRIENDFLOW_UPLOAD_STORE_PASSWORD')
+def releaseKeyAlias = envOrProperty('FRIENDFLOW_UPLOAD_KEY_ALIAS')
+def releaseKeyPassword = envOrProperty('FRIENDFLOW_UPLOAD_KEY_PASSWORD')
+def hasReleaseSigning = [releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword].every {
+    it != null && it.trim()
+}
+
 android {
     namespace "app.friendflow.mobile"
     compileSdk rootProject.ext.compileSdkVersion
@@ -7,8 +29,8 @@ android {
         applicationId "app.friendflow.mobile"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode releaseVersionCode
+        versionName releaseVersionName
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,9 +38,22 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (hasReleaseSigning) {
+            release {
+                storeFile file(releaseStoreFile)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }

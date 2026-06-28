@@ -298,6 +298,23 @@ Optional native packaging overrides:
 - `CAPACITOR_APP_ID` for the Android/iOS bundle id
 - `CAPACITOR_APP_NAME` for the app name shown by the native shell
 
+### GitHub release builds
+
+The GitHub release workflow attaches these artifacts to a published release:
+- Linux backend tarball
+- Frontend web bundle tarball
+- Signed Android `.aab`
+- iOS simulator `.app` zip
+
+For the Android `.aab`, configure these GitHub repository secrets:
+- `ANDROID_KEYSTORE_BASE64` - your upload keystore as base64
+- `ANDROID_KEYSTORE_PASSWORD` - keystore password
+- `ANDROID_KEY_ALIAS` - upload key alias
+- `ANDROID_KEY_PASSWORD` - upload key password
+
+The release workflow uses `github.run_number` as Android `versionCode` and
+the release tag as `versionName`.
+
 ## License
 
 friendflow is licensed under the **GNU Affero General Public License v3.0
