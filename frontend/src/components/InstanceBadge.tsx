@@ -1,12 +1,6 @@
 import { Globe, Lock } from "lucide-react";
-import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { api } from "../api/client";
-
-interface AuthConfig {
-  registration_mode: "approval" | "open";
-  password_reset_enabled?: boolean;
-}
+import { useAuthConfig } from "../lib/authConfig";
 
 /**
  * Small pill shown on the login & register screens that tells the visitor
@@ -16,17 +10,8 @@ interface AuthConfig {
  */
 export default function InstanceBadge() {
   const { t } = useTranslation();
-  const [mode, setMode] = useState<"approval" | "open" | null>(null);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    api<AuthConfig>("/api/auth/config", { auth: false, signal: controller.signal })
-      .then((cfg) => setMode(cfg.registration_mode))
-      .catch(() => {
-        /* offline or very old backend - render nothing. */
-      });
-    return () => controller.abort();
-  }, []);
+  const cfg = useAuthConfig();
+  const mode = cfg?.registration_mode ?? null;
 
   if (!mode) return null;
 

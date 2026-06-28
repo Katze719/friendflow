@@ -1,10 +1,6 @@
 import { useEffect, useState } from "react";
-import { api } from "../api/client";
-
-export interface AuthConfig {
-  registration_mode: "approval" | "open";
-  password_reset_enabled?: boolean;
-}
+import type { AuthConfig } from "../api/types";
+import { fetchAuthConfigForBaseUrl, useActiveInstance } from "./instances";
 
 /**
  * Fetches `/api/auth/config` once per page and hands back the tiny
@@ -14,20 +10,19 @@ export interface AuthConfig {
  * link or the private/public instance badge.
  */
 export function useAuthConfig(): AuthConfig | null {
+  const instance = useActiveInstance();
   const [cfg, setCfg] = useState<AuthConfig | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
-    api<AuthConfig>("/api/auth/config", {
-      auth: false,
-      signal: controller.signal,
-    })
+    setCfg(null);
+    fetchAuthConfigForBaseUrl(instance.baseUrl, controller.signal)
       .then((c) => setCfg(c))
       .catch(() => {
         /* offline / old backend - leave null */
       });
     return () => controller.abort();
-  }, []);
+  }, [instance.baseUrl, instance.kind]);
 
   return cfg;
 }

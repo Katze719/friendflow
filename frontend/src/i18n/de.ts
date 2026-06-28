@@ -361,6 +361,25 @@ const de: Translations = {
       password: "Passwort",
       displayName: "Anzeigename",
     },
+    instance: {
+      title: "Instanz wählen",
+      subtitle:
+        "Der Login bleibt standardmäßig schlicht. Für deinen eigenen privaten friendflow-Server kannst du hier wechseln.",
+      switchAction: "Andere Instanz",
+      currentAction: "Instanz: {{label}}",
+      activeLabel: "Aktive Instanz",
+      defaultHint: "Das standardmäßige Login-Ziel der App.",
+      defaultSelected: "Ausgewählt",
+      useDefault: "{{label}} nutzen",
+      customLabel: "Private / eigene Instanz",
+      customHint: "Gib die öffentliche Basis-URL deiner friendflow-Installation ein.",
+      useCustom: "Diese Instanz nutzen",
+      validating: "Prüfe Instanz...",
+      invalidUrl:
+        "Gib eine gültige Instanz-URL ein. Für entfernte Server bitte https:// verwenden.",
+      unreachable:
+        "Diese Instanz ist nicht erreichbar oder sieht nicht wie ein kompatibler friendflow-Server aus.",
+    },
   },
   pending: {
     title: "Warte auf Freigabe",
