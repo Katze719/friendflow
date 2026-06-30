@@ -65,11 +65,13 @@ function InstanceSwitcherDialog({
   const [customUrl, setCustomUrl] = useState(
     activeInstance.kind === "custom" ? activeInstance.baseUrl : "",
   );
+  const [customAcknowledged, setCustomAcknowledged] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setCustomUrl(activeInstance.kind === "custom" ? activeInstance.baseUrl : "");
+    setCustomAcknowledged(false);
   }, [activeInstance.baseUrl, activeInstance.kind]);
 
   useEffect(() => {
@@ -92,6 +94,10 @@ function InstanceSwitcherDialog({
     const normalized = normalizeCustomInstanceUrl(customUrl);
     if (!normalized) {
       setError(t("auth.instance.invalidUrl"));
+      return;
+    }
+    if (!customAcknowledged) {
+      setError(t("auth.instance.ackRequired"));
       return;
     }
 
@@ -218,6 +224,16 @@ function InstanceSwitcherDialog({
                 {t("auth.instance.customHint")}
               </p>
             </div>
+
+            <label className="mt-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-sm text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-100">
+              <input
+                type="checkbox"
+                className="mt-1 h-4 w-4 shrink-0 rounded border-amber-300 text-brand-600 focus:ring-brand-500"
+                checked={customAcknowledged}
+                onChange={(e) => setCustomAcknowledged(e.target.checked)}
+              />
+              <span>{t("auth.instance.customAcknowledgement")}</span>
+            </label>
 
             {error && <p className="alert-error mt-4">{error}</p>}
 

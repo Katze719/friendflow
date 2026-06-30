@@ -51,11 +51,18 @@ pub async fn oauth_callback(
     Query(q): Query<CallbackQuery>,
 ) -> Result<Redirect, AppError> {
     let base = state.cfg.app_base_url.trim_end_matches('/');
-    let err_redirect =
-        |msg: &str| format!("{}/me/integrations/google-calendar?error={}", base, urlencoding::encode(msg));
+    let err_redirect = |msg: &str| {
+        format!(
+            "{}/me/integrations/google-calendar?error={}",
+            base,
+            urlencoding::encode(msg)
+        )
+    };
 
     if let Some(err) = q.error {
-        return Ok(Redirect::temporary(&err_redirect(&format!("google: {err}"))));
+        return Ok(Redirect::temporary(&err_redirect(&format!(
+            "google: {err}"
+        ))));
     }
 
     let Some(code) = q.code.filter(|c| !c.is_empty()) else {
@@ -135,15 +142,18 @@ async fn status(State(state): State<AppState>, user: AuthUser) -> AppResult<Json
     }))
 }
 
-async fn authorize(State(state): State<AppState>, user: AuthUser) -> AppResult<Json<AuthorizeResponse>> {
+async fn authorize(
+    State(state): State<AppState>,
+    user: AuthUser,
+) -> AppResult<Json<AuthorizeResponse>> {
     let Some(ref gcal) = state.cfg.google_calendar else {
         return Err(AppError::BadRequest(
             "Google Calendar integration is not configured on this server.".into(),
         ));
     };
 
-    let state_token = create_google_oauth_state_token(user.id, &state.cfg.jwt_secret)
-        .map_err(AppError::Jwt)?;
+    let state_token =
+        create_google_oauth_state_token(user.id, &state.cfg.jwt_secret).map_err(AppError::Jwt)?;
 
     let scope = "https://www.googleapis.com/auth/calendar.events";
     let url = format!(
@@ -159,9 +169,7 @@ async fn authorize(State(state): State<AppState>, user: AuthUser) -> AppResult<J
 
 async fn disconnect(State(state): State<AppState>, user: AuthUser) -> AppResult<Json<Value>> {
     let _ = state.cfg.google_calendar.as_ref().ok_or_else(|| {
-        AppError::BadRequest(
-            "Google Calendar integration is not configured on this server.".into(),
-        )
+        AppError::BadRequest("Google Calendar integration is not configured on this server.".into())
     })?;
 
     sqlx::query("DELETE FROM google_calendar_sync_map WHERE user_id = $1")

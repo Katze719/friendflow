@@ -14,8 +14,7 @@ pub fn routes() -> Router<AppState> {
         )
         .route(
             "/events/:event_id",
-            axum::routing::patch(handlers::update_group_event)
-                .delete(handlers::delete_group_event),
+            axum::routing::patch(handlers::update_group_event).delete(handlers::delete_group_event),
         )
         .route(
             "/categories",

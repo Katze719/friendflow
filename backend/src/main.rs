@@ -23,8 +23,8 @@ mod config;
 mod db;
 mod error;
 mod games;
-mod groups;
 mod google_calendar;
+mod groups;
 mod mail;
 mod shopping;
 mod splitwise;
@@ -72,10 +72,7 @@ async fn serve(cfg: config::Config) -> anyhow::Result<()> {
         .nest("/api/auth", auth::routes())
         .nest("/api/admin", admin::routes())
         .nest("/api/groups", groups::routes())
-        .nest(
-            "/api/me/google-calendar",
-            google_calendar::routes(),
-        )
+        .nest("/api/me/google-calendar", google_calendar::routes())
         .nest("/api/me/calendar", calendar::personal_routes())
         .nest("/api/me/shopping", shopping::personal_routes())
         .nest("/api/me/tasks", tasks::personal_routes())
@@ -123,7 +120,11 @@ fn build_cors(origin: &str) -> CorsLayer {
         .filter_map(|s| HeaderValue::from_str(s).ok())
         .collect();
 
-    for mobile_origin in ["capacitor://localhost", "http://localhost", "https://localhost"] {
+    for mobile_origin in [
+        "capacitor://localhost",
+        "http://localhost",
+        "https://localhost",
+    ] {
         if let Ok(value) = HeaderValue::from_str(mobile_origin) {
             origins.push(value);
         }

@@ -291,8 +291,9 @@ can stay HTTP-only in that case.
 The frontend stays a standard SPA and now supports runtime instance
 selection for native shells. For Capacitor/mobile builds, set
 `VITE_DEFAULT_INSTANCE_URL` to the public friendflow server that should be
-preselected on the login page. Users can still switch to their own
-private instance from a secondary button in the auth flow.
+preselected on the login page. The official public instance is
+`https://friendflow.site/`. Users can still switch to their own private
+instance from a secondary button in the auth flow.
 
 Optional native packaging overrides:
 - `CAPACITOR_APP_ID` for the Android/iOS bundle id

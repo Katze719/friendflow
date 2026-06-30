@@ -456,7 +456,9 @@ async fn ensure_trip_in_group(
     group_id: Uuid,
     trip_id: Option<Uuid>,
 ) -> AppResult<()> {
-    let Some(trip_id) = trip_id else { return Ok(()) };
+    let Some(trip_id) = trip_id else {
+        return Ok(());
+    };
     let row: Option<(Uuid,)> = sqlx::query_as("SELECT group_id FROM trips WHERE id = $1")
         .bind(trip_id)
         .fetch_optional(&state.db)

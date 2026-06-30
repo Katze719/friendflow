@@ -103,7 +103,9 @@ pub async fn rename_group_list(
     Json(payload): Json<RenameListRequest>,
 ) -> AppResult<Json<ShoppingList>> {
     let scope = Scope::for_group(&state, group_id, &user).await?;
-    rename_list(&state.db, scope, list_id, payload).await.map(Json)
+    rename_list(&state.db, scope, list_id, payload)
+        .await
+        .map(Json)
 }
 
 pub async fn delete_group_list(
@@ -141,7 +143,9 @@ pub async fn rename_personal_list(
     Json(payload): Json<RenameListRequest>,
 ) -> AppResult<Json<ShoppingList>> {
     let scope = Scope::for_personal(&user);
-    rename_list(&state.db, scope, list_id, payload).await.map(Json)
+    rename_list(&state.db, scope, list_id, payload)
+        .await
+        .map(Json)
 }
 
 pub async fn delete_personal_list(
@@ -320,7 +324,9 @@ pub async fn create_group_item(
     Json(payload): Json<CreateItemRequest>,
 ) -> AppResult<Json<ShoppingItem>> {
     let scope = Scope::for_group(&state, group_id, &user).await?;
-    create_item(&state.db, scope, list_id, payload).await.map(Json)
+    create_item(&state.db, scope, list_id, payload)
+        .await
+        .map(Json)
 }
 
 pub async fn update_group_item(
@@ -386,7 +392,9 @@ pub async fn create_personal_item(
     Json(payload): Json<CreateItemRequest>,
 ) -> AppResult<Json<ShoppingItem>> {
     let scope = Scope::for_personal(&user);
-    create_item(&state.db, scope, list_id, payload).await.map(Json)
+    create_item(&state.db, scope, list_id, payload)
+        .await
+        .map(Json)
 }
 
 pub async fn update_personal_item(
@@ -537,12 +545,7 @@ async fn toggle_item(
     fetch_item(pool, item_id).await
 }
 
-async fn delete_item(
-    pool: &PgPool,
-    scope: Scope,
-    list_id: Uuid,
-    item_id: Uuid,
-) -> AppResult<()> {
+async fn delete_item(pool: &PgPool, scope: Scope, list_id: Uuid, item_id: Uuid) -> AppResult<()> {
     ensure_list_in_scope(pool, list_id, scope).await?;
     ensure_item_in_list(pool, item_id, list_id).await?;
     sqlx::query("DELETE FROM shopping_items WHERE id = $1")
@@ -568,15 +571,9 @@ async fn clear_done(pool: &PgPool, scope: Scope, list_id: Uuid) -> AppResult<u64
 /// Verify the list belongs to the given scope. Replaces the old
 /// `ensure_list_in_group` check; for personal scope it matches
 /// `owner_user_id`, for group scope it matches `group_id`.
-pub async fn ensure_list_in_scope(
-    pool: &PgPool,
-    list_id: Uuid,
-    scope: Scope,
-) -> AppResult<()> {
+pub async fn ensure_list_in_scope(pool: &PgPool, list_id: Uuid, scope: Scope) -> AppResult<()> {
     let (scope_sql, owner) = scope_filter(scope, "sl", 2);
-    let sql = format!(
-        "SELECT sl.id FROM shopping_lists sl WHERE sl.id = $1 AND {scope_sql}",
-    );
+    let sql = format!("SELECT sl.id FROM shopping_lists sl WHERE sl.id = $1 AND {scope_sql}",);
     let exists: Option<(Uuid,)> = sqlx::query_as(&sql)
         .bind(list_id)
         .bind(owner)
@@ -616,12 +613,8 @@ fn split_scope(scope: Scope) -> (Option<Uuid>, Option<Uuid>) {
 /// key first).
 fn scope_filter(scope: Scope, alias: &str, placeholder: u32) -> (String, Uuid) {
     match scope {
-        Scope::Group { group_id, .. } => {
-            (format!("{alias}.group_id = ${placeholder}"), group_id)
-        }
-        Scope::Personal { user_id } => {
-            (format!("{alias}.owner_user_id = ${placeholder}"), user_id)
-        }
+        Scope::Group { group_id, .. } => (format!("{alias}.group_id = ${placeholder}"), group_id),
+        Scope::Personal { user_id } => (format!("{alias}.owner_user_id = ${placeholder}"), user_id),
     }
 }
 

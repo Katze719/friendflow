@@ -92,6 +92,9 @@ export default function Landing() {
             <Link to="/privacy" className="hover:text-slate-900 dark:hover:text-slate-100">
               {t("legal.privacyPolicy")}
             </Link>
+            <Link to="/account-deletion" className="hover:text-slate-900 dark:hover:text-slate-100">
+              {t("legal.accountDeletion")}
+            </Link>
             <Link to="/terms" className="hover:text-slate-900 dark:hover:text-slate-100">
               {t("legal.termsOfService")}
             </Link>

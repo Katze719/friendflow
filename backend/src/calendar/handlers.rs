@@ -465,12 +465,11 @@ async fn fetch_event(pool: &PgPool, scope: Scope, id: Uuid) -> AppResult<Calenda
 /// FK is unconditional; we add this check so private events can't borrow a
 /// group category (and vice versa).
 async fn ensure_category_in_scope(pool: &PgPool, scope: Scope, cat_id: Uuid) -> AppResult<()> {
-    let row: Option<(Option<Uuid>, Option<Uuid>)> = sqlx::query_as(
-        "SELECT group_id, owner_user_id FROM calendar_categories WHERE id = $1",
-    )
-    .bind(cat_id)
-    .fetch_optional(pool)
-    .await?;
+    let row: Option<(Option<Uuid>, Option<Uuid>)> =
+        sqlx::query_as("SELECT group_id, owner_user_id FROM calendar_categories WHERE id = $1")
+            .bind(cat_id)
+            .fetch_optional(pool)
+            .await?;
     let Some((g, o)) = row else {
         return Err(AppError::NotFound("category not found".into()));
     };

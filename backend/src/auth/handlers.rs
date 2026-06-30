@@ -4,7 +4,6 @@ use chrono::{DateTime, Duration, Utc};
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use sqlx::error::ErrorKind;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -101,10 +100,11 @@ pub async fn register(
     let email = payload.email.trim().to_lowercase();
     let display_name = payload.display_name.trim().to_string();
 
-    let existing: Option<(Uuid,)> = sqlx::query_as("SELECT id FROM users WHERE email = $1")
-        .bind(&email)
-        .fetch_optional(&state.db)
-        .await?;
+    let existing: Option<(Uuid,)> =
+        sqlx::query_as("SELECT id FROM users WHERE email = $1 AND deleted_at IS NULL")
+            .bind(&email)
+            .fetch_optional(&state.db)
+            .await?;
     if existing.is_some() {
         return Err(AppError::Conflict("email already registered".into()));
     }
@@ -180,7 +180,7 @@ pub async fn login(
 
     let row: Option<(Uuid, String, String, String, String, bool, DateTime<Utc>)> = sqlx::query_as(
         "SELECT id, email, display_name, password_hash, status, is_admin, created_at
-         FROM users WHERE email = $1",
+         FROM users WHERE email = $1 AND deleted_at IS NULL",
     )
     .bind(&email)
     .fetch_optional(&state.db)
@@ -294,7 +294,9 @@ pub async fn forgot_password(
     // anyway, and we don't want admins to "reset" a password they never
     // actually vouched for.
     let user: Option<(Uuid, String, String)> = sqlx::query_as(
-        "SELECT id, email, display_name FROM users WHERE email = $1 AND status = 'approved'",
+        "SELECT id, email, display_name
+         FROM users
+         WHERE email = $1 AND status = 'approved' AND deleted_at IS NULL",
     )
     .bind(&email)
     .fetch_optional(&state.db)
@@ -557,7 +559,7 @@ fn html_escape(input: &str) -> String {
 pub async fn me(State(state): State<AppState>, user: AuthUser) -> AppResult<Json<UserResponse>> {
     let row: Option<(Uuid, String, String, String, bool, DateTime<Utc>)> = sqlx::query_as(
         "SELECT id, email, display_name, status, is_admin, created_at
-         FROM users WHERE id = $1",
+         FROM users WHERE id = $1 AND deleted_at IS NULL",
     )
     .bind(user.id)
     .fetch_optional(&state.db)
@@ -593,7 +595,7 @@ pub async fn update_me(
     let row: (Uuid, String, String, String, bool, DateTime<Utc>) = sqlx::query_as(
         "UPDATE users
          SET display_name = $1
-         WHERE id = $2
+         WHERE id = $2 AND deleted_at IS NULL
          RETURNING id, email, display_name, status, is_admin, created_at",
     )
     .bind(display_name)
@@ -618,10 +620,11 @@ pub async fn change_password(
 ) -> AppResult<Json<ChangePasswordResponse>> {
     payload.validate()?;
 
-    let row: Option<(String,)> = sqlx::query_as("SELECT password_hash FROM users WHERE id = $1")
-        .bind(user.id)
-        .fetch_optional(&state.db)
-        .await?;
+    let row: Option<(String,)> =
+        sqlx::query_as("SELECT password_hash FROM users WHERE id = $1 AND deleted_at IS NULL")
+            .bind(user.id)
+            .fetch_optional(&state.db)
+            .await?;
 
     let Some((password_hash,)) = row else {
         return Err(AppError::Unauthorized);
@@ -636,7 +639,7 @@ pub async fn change_password(
     let new_hash = password::hash_password(&payload.new_password)
         .map_err(|e| AppError::Internal(anyhow::anyhow!("hash error: {e}")))?;
 
-    sqlx::query("UPDATE users SET password_hash = $1 WHERE id = $2")
+    sqlx::query("UPDATE users SET password_hash = $1 WHERE id = $2 AND deleted_at IS NULL")
         .bind(new_hash)
         .bind(user.id)
         .execute(&state.db)
@@ -652,10 +655,11 @@ pub async fn delete_me(
 ) -> AppResult<Json<DeleteMeResponse>> {
     payload.validate()?;
 
-    let row: Option<(String,)> = sqlx::query_as("SELECT password_hash FROM users WHERE id = $1")
-        .bind(user.id)
-        .fetch_optional(&state.db)
-        .await?;
+    let row: Option<(String,)> =
+        sqlx::query_as("SELECT password_hash FROM users WHERE id = $1 AND deleted_at IS NULL")
+            .bind(user.id)
+            .fetch_optional(&state.db)
+            .await?;
 
     let Some((password_hash,)) = row else {
         return Err(AppError::Unauthorized);
@@ -667,18 +671,135 @@ pub async fn delete_me(
         return Err(AppError::BadRequest("password is incorrect".into()));
     }
 
-    let result = sqlx::query("DELETE FROM users WHERE id = $1")
-        .bind(user.id)
-        .execute(&state.db)
-        .await;
+    delete_account_for_user(&state, user.id).await?;
 
-    match result {
-        Ok(_) => Ok(Json(DeleteMeResponse { status: "ok" })),
-        Err(sqlx::Error::Database(db_err)) if db_err.kind() == ErrorKind::ForeignKeyViolation => {
-            Err(AppError::Conflict(
-                "account cannot be deleted while it still owns shared data; remove or transfer those entries first".into(),
-            ))
-        }
-        Err(err) => Err(err.into()),
+    Ok(Json(DeleteMeResponse { status: "ok" }))
+}
+
+pub async fn delete_account_for_user(state: &AppState, user_id: Uuid) -> AppResult<()> {
+    let mut tx = state.db.begin().await?;
+
+    let row: Option<(Uuid,)> =
+        sqlx::query_as("SELECT id FROM users WHERE id = $1 AND deleted_at IS NULL")
+            .bind(user_id)
+            .fetch_optional(&mut *tx)
+            .await?;
+    if row.is_none() {
+        return Err(AppError::NotFound("user not found".into()));
     }
+
+    // Groups where this account is the last member are personal in practice;
+    // remove them and all cascading shared tool data before dropping the
+    // membership rows for groups that still have other members.
+    sqlx::query(
+        "DELETE FROM groups g
+         USING group_members gm
+         WHERE g.id = gm.group_id
+           AND gm.user_id = $1
+           AND NOT EXISTS (
+             SELECT 1 FROM group_members gm2
+             WHERE gm2.group_id = g.id AND gm2.user_id <> $1
+           )",
+    )
+    .bind(user_id)
+    .execute(&mut *tx)
+    .await?;
+
+    // Transfer the immutable group creator used by delete permissions before
+    // the account leaves its remaining groups.
+    sqlx::query(
+        "UPDATE groups g
+         SET created_by = (
+           SELECT gm.user_id
+           FROM group_members gm
+           WHERE gm.group_id = g.id AND gm.user_id <> $1
+           ORDER BY (gm.role = 'owner') DESC, gm.joined_at ASC
+           LIMIT 1
+         )
+         WHERE g.created_by = $1
+           AND EXISTS (
+             SELECT 1 FROM group_members gm
+             WHERE gm.group_id = g.id AND gm.user_id <> $1
+           )",
+    )
+    .bind(user_id)
+    .execute(&mut *tx)
+    .await?;
+
+    sqlx::query("DELETE FROM google_calendar_sync_map WHERE user_id = $1")
+        .bind(user_id)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM user_google_calendar WHERE user_id = $1")
+        .bind(user_id)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM password_reset_tokens WHERE user_id = $1")
+        .bind(user_id)
+        .execute(&mut *tx)
+        .await?;
+
+    sqlx::query("DELETE FROM calendar_events WHERE owner_user_id = $1")
+        .bind(user_id)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM calendar_categories WHERE owner_user_id = $1")
+        .bind(user_id)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM shopping_items WHERE owner_user_id = $1")
+        .bind(user_id)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM shopping_lists WHERE owner_user_id = $1")
+        .bind(user_id)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM tasks WHERE owner_user_id = $1")
+        .bind(user_id)
+        .execute(&mut *tx)
+        .await?;
+
+    sqlx::query("DELETE FROM group_members WHERE user_id = $1")
+        .bind(user_id)
+        .execute(&mut *tx)
+        .await?;
+
+    // If the deleted account was the only owner in a group with remaining
+    // members, promote the earliest joined remaining member.
+    sqlx::query(
+        "UPDATE group_members gm
+         SET role = 'owner'
+         WHERE (gm.group_id, gm.user_id) IN (
+           SELECT DISTINCT ON (candidate.group_id)
+                  candidate.group_id, candidate.user_id
+           FROM group_members candidate
+           WHERE NOT EXISTS (
+             SELECT 1 FROM group_members owner
+             WHERE owner.group_id = candidate.group_id AND owner.role = 'owner'
+           )
+           ORDER BY candidate.group_id, candidate.joined_at ASC
+         )",
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    let deleted_email = format!("deleted-{}@deleted.friendflow.local", user_id);
+    sqlx::query(
+        "UPDATE users
+         SET email = $1,
+             display_name = 'Deleted user',
+             password_hash = 'deleted-account',
+             status = 'pending',
+             is_admin = FALSE,
+             deleted_at = NOW()
+         WHERE id = $2",
+    )
+    .bind(deleted_email)
+    .bind(user_id)
+    .execute(&mut *tx)
+    .await?;
+
+    tx.commit().await?;
+    Ok(())
 }

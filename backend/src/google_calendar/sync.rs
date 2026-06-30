@@ -7,10 +7,7 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 use uuid::Uuid;
 
-use crate::{
-    config::GoogleCalendarOAuth,
-    state::AppState,
-};
+use crate::{config::GoogleCalendarOAuth, state::AppState};
 
 use super::oauth;
 
@@ -127,9 +124,15 @@ async fn backfill_existing_entities(
         sync_entity(state, gcal, user_id, SyncEntity::Calendar(payload)).await?;
     }
 
-    let trip_rows: Vec<(Uuid, Uuid, String, Option<NaiveDate>, Option<NaiveDate>, Vec<String>)> =
-        sqlx::query_as(
-            "SELECT t.id, t.group_id, t.name, t.start_date, t.end_date,
+    let trip_rows: Vec<(
+        Uuid,
+        Uuid,
+        String,
+        Option<NaiveDate>,
+        Option<NaiveDate>,
+        Vec<String>,
+    )> = sqlx::query_as(
+        "SELECT t.id, t.group_id, t.name, t.start_date, t.end_date,
                     COALESCE(
                       (
                         SELECT ARRAY_AGG(
@@ -145,10 +148,10 @@ async fn backfill_existing_entities(
              FROM trips t
              INNER JOIN group_members gm ON gm.group_id = t.group_id
              WHERE gm.user_id = $1",
-        )
-        .bind(user_id)
-        .fetch_all(&state.db)
-        .await?;
+    )
+    .bind(user_id)
+    .fetch_all(&state.db)
+    .await?;
 
     for row in trip_rows {
         let payload = SyncEntity::Trip {
@@ -274,14 +277,7 @@ async fn upsert_calendar_event(
     .await?;
 
     if let Some(geid) = existing {
-        patch_event(
-            state.http.clone(),
-            access_token,
-            calendar_id,
-            &geid,
-            body,
-        )
-        .await?;
+        patch_event(state.http.clone(), access_token, calendar_id, &geid, body).await?;
     } else {
         let id = insert_event(state.http.clone(), access_token, calendar_id, body).await?;
         sqlx::query(
@@ -327,14 +323,7 @@ async fn upsert_trip_event(
     .await?;
 
     if let Some(geid) = existing {
-        patch_event(
-            state.http.clone(),
-            access_token,
-            calendar_id,
-            &geid,
-            body,
-        )
-        .await?;
+        patch_event(state.http.clone(), access_token, calendar_id, &geid, body).await?;
     } else {
         let id = insert_event(state.http.clone(), access_token, calendar_id, body).await?;
         sqlx::query(
@@ -490,11 +479,7 @@ async fn delete_google_event_api(
         urlencoding::encode(calendar_id),
         urlencoding::encode(google_event_id)
     );
-    let res = http
-        .delete(url)
-        .bearer_auth(access_token)
-        .send()
-        .await?;
+    let res = http.delete(url).bearer_auth(access_token).send().await?;
     let status = res.status();
     if status == StatusCode::NOT_FOUND || status == StatusCode::GONE {
         return Ok(());
@@ -555,13 +540,7 @@ async fn delete_mapped_event(
     )
     .await?;
 
-    let _ = delete_google_event_api(
-        &state.http,
-        &access.access_token,
-        &calendar_id,
-        &geid,
-    )
-    .await;
+    let _ = delete_google_event_api(&state.http, &access.access_token, &calendar_id, &geid).await;
 
     Ok(())
 }

@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::{
-    auth::middleware::AdminUser,
+    auth::{handlers::delete_account_for_user, middleware::AdminUser},
     error::{AppError, AppResult},
     state::AppState,
 };
@@ -37,12 +37,12 @@ pub async fn list_users(
     let (sql, bind_status): (&str, Option<String>) = match q.status.as_deref() {
         Some(s) if s == "pending" || s == "approved" => (
             "SELECT id, email, display_name, status, is_admin, approved_at, created_at
-             FROM users WHERE status = $1 ORDER BY created_at DESC",
+             FROM users WHERE status = $1 AND deleted_at IS NULL ORDER BY created_at DESC",
             Some(s.to_string()),
         ),
         _ => (
             "SELECT id, email, display_name, status, is_admin, approved_at, created_at
-             FROM users ORDER BY created_at DESC",
+             FROM users WHERE deleted_at IS NULL ORDER BY created_at DESC",
             None,
         ),
     };
@@ -95,7 +95,7 @@ pub async fn approve_user(
     )> = sqlx::query_as(
         "UPDATE users
              SET status = 'approved', approved_at = COALESCE(approved_at, NOW())
-             WHERE id = $1
+             WHERE id = $1 AND deleted_at IS NULL
              RETURNING id, email, display_name, status, is_admin, approved_at, created_at",
     )
     .bind(id)
@@ -134,7 +134,7 @@ pub async fn promote_user(
              SET is_admin = TRUE,
                  status = 'approved',
                  approved_at = COALESCE(approved_at, NOW())
-             WHERE id = $1
+             WHERE id = $1 AND deleted_at IS NULL
              RETURNING id, email, display_name, status, is_admin, approved_at, created_at",
     )
     .bind(id)
@@ -162,13 +162,14 @@ pub async fn demote_user(
 ) -> AppResult<Json<AdminUserRow>> {
     // Prevent admins from demoting themselves into a state with no admins.
     // If this user is the last admin, refuse.
-    let admin_count: (i64,) =
-        sqlx::query_as("SELECT COUNT(*)::BIGINT FROM users WHERE is_admin = TRUE")
-            .fetch_one(&state.db)
-            .await?;
+    let admin_count: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*)::BIGINT FROM users WHERE is_admin = TRUE AND deleted_at IS NULL",
+    )
+    .fetch_one(&state.db)
+    .await?;
 
     let target_is_admin: Option<(bool,)> =
-        sqlx::query_as("SELECT is_admin FROM users WHERE id = $1")
+        sqlx::query_as("SELECT is_admin FROM users WHERE id = $1 AND deleted_at IS NULL")
             .bind(id)
             .fetch_optional(&state.db)
             .await?;
@@ -196,7 +197,7 @@ pub async fn demote_user(
         DateTime<Utc>,
     )> = sqlx::query_as(
         "UPDATE users SET is_admin = FALSE
-             WHERE id = $1
+             WHERE id = $1 AND deleted_at IS NULL
              RETURNING id, email, display_name, status, is_admin, approved_at, created_at",
     )
     .bind(id)
@@ -226,19 +227,6 @@ pub async fn delete_user(
         return Err(AppError::BadRequest("cannot delete yourself".into()));
     }
 
-    let res = sqlx::query("DELETE FROM users WHERE id = $1")
-        .bind(id)
-        .execute(&state.db)
-        .await
-        .map_err(|e| {
-            // Most common reason: user owns groups or expenses that cannot be cascaded.
-            AppError::Conflict(format!(
-                "cannot delete user (they may own groups or expenses): {e}"
-            ))
-        })?;
-
-    if res.rows_affected() == 0 {
-        return Err(AppError::NotFound("user not found".into()));
-    }
+    delete_account_for_user(&state, id).await?;
     Ok(Json(serde_json::json!({ "ok": true })))
 }
