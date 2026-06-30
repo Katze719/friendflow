@@ -184,19 +184,27 @@ pub async fn list_tournaments(
     Path(group_id): Path<Uuid>,
 ) -> AppResult<Json<Vec<TournamentSummary>>> {
     ensure_member(&state, group_id, user.id).await?;
-    let rows: Vec<(Uuid, String, String, bool, Option<i32>, String, i64, DateTime<Utc>)> =
-        sqlx::query_as(
-            "SELECT t.id, t.name, t.format, t.team_mode, t.team_size, t.status,
+    let rows: Vec<(
+        Uuid,
+        String,
+        String,
+        bool,
+        Option<i32>,
+        String,
+        i64,
+        DateTime<Utc>,
+    )> = sqlx::query_as(
+        "SELECT t.id, t.name, t.format, t.team_mode, t.team_size, t.status,
                     (SELECT COUNT(*) FROM tournament_participants p WHERE p.tournament_id = t.id)
                         AS participant_count,
                     t.created_at
              FROM tournaments t
              WHERE t.group_id = $1
              ORDER BY t.created_at DESC",
-        )
-        .bind(group_id)
-        .fetch_all(&state.db)
-        .await?;
+    )
+    .bind(group_id)
+    .fetch_all(&state.db)
+    .await?;
 
     let out = rows
         .into_iter()
@@ -438,24 +446,26 @@ pub async fn update_participant(
     ensure_setup(&t)?;
 
     // Participant must belong to this tournament.
-    let exists: Option<(Uuid,)> =
-        sqlx::query_as("SELECT id FROM tournament_participants WHERE id = $1 AND tournament_id = $2")
-            .bind(pid)
-            .bind(tid)
-            .fetch_optional(&state.db)
-            .await?;
+    let exists: Option<(Uuid,)> = sqlx::query_as(
+        "SELECT id FROM tournament_participants WHERE id = $1 AND tournament_id = $2",
+    )
+    .bind(pid)
+    .bind(tid)
+    .fetch_optional(&state.db)
+    .await?;
     if exists.is_none() {
         return Err(AppError::NotFound("participant not found".into()));
     }
 
     if let Some(team_opt) = payload.team_id {
         if let Some(team_id) = team_opt {
-            let team: Option<(Uuid,)> =
-                sqlx::query_as("SELECT id FROM tournament_teams WHERE id = $1 AND tournament_id = $2")
-                    .bind(team_id)
-                    .bind(tid)
-                    .fetch_optional(&state.db)
-                    .await?;
+            let team: Option<(Uuid,)> = sqlx::query_as(
+                "SELECT id FROM tournament_teams WHERE id = $1 AND tournament_id = $2",
+            )
+            .bind(team_id)
+            .bind(tid)
+            .fetch_optional(&state.db)
+            .await?;
             if team.is_none() {
                 return Err(AppError::BadRequest("team not found".into()));
             }
@@ -580,14 +590,15 @@ pub async fn randomize(
     let team_size = t.team_size.unwrap_or(2).max(1);
 
     // Load participants and shuffle them.
-    let mut participant_ids: Vec<Uuid> =
-        sqlx::query_as::<_, (Uuid,)>("SELECT id FROM tournament_participants WHERE tournament_id = $1")
-            .bind(tid)
-            .fetch_all(&state.db)
-            .await?
-            .into_iter()
-            .map(|(id,)| id)
-            .collect();
+    let mut participant_ids: Vec<Uuid> = sqlx::query_as::<_, (Uuid,)>(
+        "SELECT id FROM tournament_participants WHERE tournament_id = $1",
+    )
+    .bind(tid)
+    .fetch_all(&state.db)
+    .await?
+    .into_iter()
+    .map(|(id,)| id)
+    .collect();
     if participant_ids.is_empty() {
         return Err(AppError::BadRequest(
             "add participants before randomizing teams".into(),
@@ -779,7 +790,11 @@ pub async fn submit_result(
         if let (Some(next_id), Some(slot), Some(winner_id)) =
             (next_match_id, next_slot.as_deref(), winner)
         {
-            let column = if slot == "a" { "entrant_a_id" } else { "entrant_b_id" };
+            let column = if slot == "a" {
+                "entrant_a_id"
+            } else {
+                "entrant_b_id"
+            };
             let sql = format!("UPDATE tournament_matches SET {column} = $1 WHERE id = $2");
             sqlx::query(&sql)
                 .bind(winner_id)
@@ -796,7 +811,11 @@ pub async fn submit_result(
     .bind(tid)
     .fetch_one(&state.db)
     .await?;
-    let new_status = if pending.0 == 0 { "completed" } else { "active" };
+    let new_status = if pending.0 == 0 {
+        "completed"
+    } else {
+        "active"
+    };
     sqlx::query("UPDATE tournaments SET status = $1 WHERE id = $2")
         .bind(new_status)
         .bind(tid)
@@ -1067,22 +1086,25 @@ async fn next_team_position(pool: &PgPool, tid: Uuid) -> AppResult<i32> {
 async fn fetch_detail(pool: &PgPool, group_id: Uuid, tid: Uuid) -> AppResult<TournamentDetail> {
     let t = load_tournament(pool, group_id, tid).await?;
 
-    let participants: Vec<ParticipantOut> = sqlx::query_as::<_, (Uuid, Option<Uuid>, String, Option<Uuid>, i32)>(
-        "SELECT id, user_id, display_name, team_id, position
+    let participants: Vec<ParticipantOut> =
+        sqlx::query_as::<_, (Uuid, Option<Uuid>, String, Option<Uuid>, i32)>(
+            "SELECT id, user_id, display_name, team_id, position
          FROM tournament_participants WHERE tournament_id = $1 ORDER BY position",
-    )
-    .bind(tid)
-    .fetch_all(pool)
-    .await?
-    .into_iter()
-    .map(|(id, user_id, display_name, team_id, position)| ParticipantOut {
-        id,
-        user_id,
-        display_name,
-        team_id,
-        position,
-    })
-    .collect();
+        )
+        .bind(tid)
+        .fetch_all(pool)
+        .await?
+        .into_iter()
+        .map(
+            |(id, user_id, display_name, team_id, position)| ParticipantOut {
+                id,
+                user_id,
+                display_name,
+                team_id,
+                position,
+            },
+        )
+        .collect();
 
     let team_rows: Vec<(Uuid, String, i32)> = sqlx::query_as(
         "SELECT id, name, position FROM tournament_teams WHERE tournament_id = $1 ORDER BY position",
@@ -1104,23 +1126,26 @@ async fn fetch_detail(pool: &PgPool, group_id: Uuid, tid: Uuid) -> AppResult<Tou
         })
         .collect();
 
-    let entrants: Vec<EntrantOut> = sqlx::query_as::<_, (Uuid, String, Option<Uuid>, Option<Uuid>, String, i32)>(
-        "SELECT id, kind, participant_id, team_id, display_name, seed
+    let entrants: Vec<EntrantOut> =
+        sqlx::query_as::<_, (Uuid, String, Option<Uuid>, Option<Uuid>, String, i32)>(
+            "SELECT id, kind, participant_id, team_id, display_name, seed
          FROM tournament_entrants WHERE tournament_id = $1 ORDER BY seed",
-    )
-    .bind(tid)
-    .fetch_all(pool)
-    .await?
-    .into_iter()
-    .map(|(id, kind, participant_id, team_id, display_name, seed)| EntrantOut {
-        id,
-        kind,
-        participant_id,
-        team_id,
-        display_name,
-        seed,
-    })
-    .collect();
+        )
+        .bind(tid)
+        .fetch_all(pool)
+        .await?
+        .into_iter()
+        .map(
+            |(id, kind, participant_id, team_id, display_name, seed)| EntrantOut {
+                id,
+                kind,
+                participant_id,
+                team_id,
+                display_name,
+                seed,
+            },
+        )
+        .collect();
 
     let matches: Vec<MatchOut> = sqlx::query_as::<
         _,
@@ -1256,10 +1281,11 @@ fn compute_standings(entrants: &[EntrantOut], matches: &[MatchOut]) -> Vec<Stand
     }
 
     rows.sort_by(|x, y| {
-        y.points
-            .cmp(&x.points)
-            .then(y.wins.cmp(&x.wins))
-            .then(x.display_name.to_lowercase().cmp(&y.display_name.to_lowercase()))
+        y.points.cmp(&x.points).then(y.wins.cmp(&x.wins)).then(
+            x.display_name
+                .to_lowercase()
+                .cmp(&y.display_name.to_lowercase()),
+        )
     });
     rows
 }

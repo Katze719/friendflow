@@ -51,6 +51,7 @@ const de: Translations = {
   },
   legal: {
     privacyPolicy: "Datenschutz",
+    accountDeletion: "Konto löschen",
     termsOfService: "Nutzungsbedingungen",
     backHome: "Zur Startseite",
   },
@@ -380,6 +381,9 @@ const de: Translations = {
         "Gib eine gültige Instanz-URL ein. Für entfernte Server bitte https:// verwenden.",
       unreachable:
         "Diese Instanz ist nicht erreichbar oder sieht nicht wie ein kompatibler friendflow-Server aus.",
+      customAcknowledgement:
+        "Ich verstehe, dass diese Instanz von jemand anderem betrieben werden kann und dort deren Datenschutz, Support-Kontakt und Löschprozess gelten.",
+      ackRequired: "Bestätige den Hinweis zur eigenen Instanz, bevor du wechselst.",
     },
   },
   pending: {
@@ -411,12 +415,12 @@ const de: Translations = {
       title: "Konto löschen",
       subtitle: "Entfernt dieses Konto dauerhaft von dieser Instanz.",
       warning:
-        "Das lässt sich nicht rückgängig machen. Rein persönliche Daten können automatisch entfernt werden, aber geteilte Gruppendaten können die Löschung blockieren, bis du sie entfernst oder übergibst.",
+        "Das lässt sich nicht rückgängig machen. Rein persönliche Daten werden automatisch entfernt. Geteilte Gruppenhistorie kann mit einem Gelöschter-Nutzer-Hinweis bestehen bleiben, damit die Gruppe für andere nutzbar bleibt.",
       password: "Aktuelles Passwort",
       submit: "Konto löschen",
       confirmTitle: "Dieses Konto löschen?",
       confirmBody:
-        "Dadurch wird dein Konto auf dieser Instanz dauerhaft entfernt. Wenn noch geteilte Inhalte dir gehören, kann die Löschung abgelehnt werden, bis du diese vorher bereinigst.",
+        "Dadurch wird dein Login auf dieser Instanz dauerhaft deaktiviert, persönliche Daten werden entfernt und geteilte Gruppenhistorie bleibt bei Bedarf anonymisiert erhalten.",
       deleted: "Konto gelöscht.",
       errors: {
         passwordRequired: "Gib dein aktuelles Passwort ein, um das Konto zu löschen.",

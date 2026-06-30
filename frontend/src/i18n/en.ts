@@ -49,6 +49,7 @@ const en = {
   },
   legal: {
     privacyPolicy: "Privacy policy",
+    accountDeletion: "Account deletion",
     termsOfService: "Terms of service",
     backHome: "Home",
   },
@@ -376,6 +377,9 @@ const en = {
       invalidUrl: "Enter a valid instance URL. Use https:// for remote servers.",
       unreachable:
         "This instance could not be reached or does not look like a compatible friendflow server.",
+      customAcknowledgement:
+        "I understand that this instance may be operated by someone else, and that their privacy policy, support contact and account deletion process apply there.",
+      ackRequired: "Confirm the custom instance notice before switching.",
     },
   },
   pending: {
@@ -407,12 +411,12 @@ const en = {
       title: "Delete account",
       subtitle: "Permanently remove this account from this instance.",
       warning:
-        "This cannot be undone. Personal-only data can be removed automatically, but shared group data may block deletion until you remove or transfer it.",
+        "This cannot be undone. Personal-only data is removed automatically. Shared group history may remain with a deleted-user label so the group stays usable for other members.",
       password: "Current password",
       submit: "Delete account",
       confirmTitle: "Delete this account?",
       confirmBody:
-        "This permanently removes your account on this instance. If shared content still belongs to you, deletion may be refused until you clean that up first.",
+        "This permanently disables your sign-in on this instance, removes personal-only data and leaves shared group history anonymized where needed.",
       deleted: "Account deleted.",
       errors: {
         passwordRequired: "Enter your current password to delete this account.",

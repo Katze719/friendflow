@@ -88,7 +88,9 @@ pub async fn update_group_category(
     Json(payload): Json<UpdateCategoryRequest>,
 ) -> AppResult<Json<Category>> {
     let scope = Scope::for_group(&state, group_id, &user).await?;
-    update(&state.db, scope, category_id, payload).await.map(Json)
+    update(&state.db, scope, category_id, payload)
+        .await
+        .map(Json)
 }
 
 pub async fn delete_group_category(
@@ -127,7 +129,9 @@ pub async fn update_personal_category(
     Json(payload): Json<UpdateCategoryRequest>,
 ) -> AppResult<Json<Category>> {
     let scope = Scope::for_personal(&user);
-    update(&state.db, scope, category_id, payload).await.map(Json)
+    update(&state.db, scope, category_id, payload)
+        .await
+        .map(Json)
 }
 
 pub async fn delete_personal_category(
@@ -243,9 +247,7 @@ async fn delete(pool: &PgPool, scope: Scope, category_id: Uuid) -> AppResult<()>
         Scope::Group { group_id, .. } => ("group_id = $2", group_id),
         Scope::Personal { user_id } => ("owner_user_id = $2", user_id),
     };
-    let sql = format!(
-        "DELETE FROM calendar_categories WHERE id = $1 AND {scope_sql}",
-    );
+    let sql = format!("DELETE FROM calendar_categories WHERE id = $1 AND {scope_sql}",);
     let result = sqlx::query(&sql)
         .bind(category_id)
         .bind(owner)

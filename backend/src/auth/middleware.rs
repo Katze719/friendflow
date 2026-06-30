@@ -49,15 +49,21 @@ impl FromRequestParts<AppState> for AuthUser {
         let claims =
             decode_token(token, &state.cfg.jwt_secret).map_err(|_| AppError::Unauthorized)?;
 
-        let row: Option<(Uuid, String, bool)> =
-            sqlx::query_as("SELECT id, status, is_admin FROM users WHERE id = $1")
-                .bind(claims.sub)
-                .fetch_optional(&state.db)
-                .await?;
+        let row: Option<(Uuid, String, bool, bool)> = sqlx::query_as(
+            "SELECT id, status, is_admin, deleted_at IS NOT NULL
+                 FROM users WHERE id = $1",
+        )
+        .bind(claims.sub)
+        .fetch_optional(&state.db)
+        .await?;
 
-        let Some((id, status, is_admin)) = row else {
+        let Some((id, status, is_admin, is_deleted)) = row else {
             return Err(AppError::Unauthorized);
         };
+
+        if is_deleted {
+            return Err(AppError::Unauthorized);
+        }
 
         if status != "approved" {
             return Err(AppError::AccountPending);

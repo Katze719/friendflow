@@ -22,19 +22,14 @@ pub fn routes() -> Router<AppState> {
         .route("/", get(trip::list).post(trip::create))
         .route(
             "/:trip_id",
-            get(trip::get)
-                .patch(trip::update)
-                .delete(trip::delete),
+            get(trip::get).patch(trip::update).delete(trip::delete),
         )
         // --- Link board -----------------------------------------------
         .route(
             "/:trip_id/links",
             get(handlers::list_links).post(handlers::create_link),
         )
-        .route(
-            "/:trip_id/links/reorder",
-            put(handlers::reorder_links),
-        )
+        .route("/:trip_id/links/reorder", put(handlers::reorder_links))
         .route(
             "/:trip_id/links/:link_id",
             axum::routing::patch(handlers::update_link).delete(handlers::delete_link),
@@ -43,14 +38,8 @@ pub fn routes() -> Router<AppState> {
             "/:trip_id/links/:link_id/refresh",
             post(handlers::refresh_link),
         )
-        .route(
-            "/:trip_id/links/:link_id/vote",
-            put(handlers::vote_link),
-        )
-        .route(
-            "/:trip_id/links/:link_id/folder",
-            put(handlers::move_link),
-        )
+        .route("/:trip_id/links/:link_id/vote", put(handlers::vote_link))
+        .route("/:trip_id/links/:link_id/folder", put(handlers::move_link))
         .route(
             "/:trip_id/folders",
             get(handlers::list_folders).post(handlers::create_folder),
@@ -64,27 +53,18 @@ pub fn routes() -> Router<AppState> {
             "/:trip_id/packing",
             get(packing::list).post(packing::create),
         )
-        .route(
-            "/:trip_id/packing/reorder",
-            put(packing::reorder),
-        )
+        .route("/:trip_id/packing/reorder", put(packing::reorder))
         .route(
             "/:trip_id/packing/:item_id",
             axum::routing::patch(packing::update).delete(packing::delete),
         )
-        .route(
-            "/:trip_id/packing/:item_id/toggle",
-            post(packing::toggle),
-        )
+        .route("/:trip_id/packing/:item_id/toggle", post(packing::toggle))
         // --- Itinerary -------------------------------------------------
         .route(
             "/:trip_id/itinerary",
             get(itinerary::list).post(itinerary::create),
         )
-        .route(
-            "/:trip_id/itinerary/reorder",
-            put(itinerary::reorder),
-        )
+        .route("/:trip_id/itinerary/reorder", put(itinerary::reorder))
         .route(
             "/:trip_id/itinerary/:item_id",
             axum::routing::patch(itinerary::update).delete(itinerary::delete),

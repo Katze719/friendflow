@@ -172,6 +172,12 @@ export default function Layout({ children }: { children: ReactNode }) {
               {t("legal.privacyPolicy")}
             </Link>
             <Link
+              to="/account-deletion"
+              className="hover:text-slate-800 dark:hover:text-slate-200"
+            >
+              {t("legal.accountDeletion")}
+            </Link>
+            <Link
               to="/terms"
               className="hover:text-slate-800 dark:hover:text-slate-200"
             >

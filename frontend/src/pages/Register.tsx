@@ -128,6 +128,9 @@ export default function Register() {
         <Link className="hover:text-slate-800 dark:hover:text-slate-200" to="/privacy">
           {t("legal.privacyPolicy")}
         </Link>
+        <Link className="hover:text-slate-800 dark:hover:text-slate-200" to="/account-deletion">
+          {t("legal.accountDeletion")}
+        </Link>
         <Link className="hover:text-slate-800 dark:hover:text-slate-200" to="/terms">
           {t("legal.termsOfService")}
         </Link>

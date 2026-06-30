@@ -195,7 +195,15 @@ pub async fn list(
     State(state): State<AppState>,
     user: AuthUser,
 ) -> AppResult<Json<Vec<GroupSummary>>> {
-    let rows: Vec<(Uuid, String, Option<String>, String, DateTime<Utc>, i64, String)> = sqlx::query_as(
+    let rows: Vec<(
+        Uuid,
+        String,
+        Option<String>,
+        String,
+        DateTime<Utc>,
+        i64,
+        String,
+    )> = sqlx::query_as(
         r#"
         SELECT
             g.id, g.name, g.invite_code, g.currency, g.created_at,
@@ -236,13 +244,14 @@ pub async fn detail(
 ) -> AppResult<Json<GroupDetail>> {
     super::ensure_member(&state, id, user.id).await?;
 
-    let group: Option<(Uuid, String, Option<String>, String, Uuid, DateTime<Utc>)> = sqlx::query_as(
-        "SELECT id, name, invite_code, currency, created_by, created_at
+    let group: Option<(Uuid, String, Option<String>, String, Uuid, DateTime<Utc>)> =
+        sqlx::query_as(
+            "SELECT id, name, invite_code, currency, created_by, created_at
          FROM groups WHERE id = $1",
-    )
-    .bind(id)
-    .fetch_optional(&state.db)
-    .await?;
+        )
+        .bind(id)
+        .fetch_optional(&state.db)
+        .await?;
     let Some((gid, name, invite_code, currency, created_by, created_at)) = group else {
         return Err(AppError::NotFound("group not found".into()));
     };

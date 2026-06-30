@@ -175,7 +175,9 @@ pub async fn toggle_group_task(
     Json(payload): Json<ToggleRequest>,
 ) -> AppResult<Json<Task>> {
     let scope = Scope::for_group(&state, group_id, &user).await?;
-    toggle_task(&state.db, scope, task_id, payload).await.map(Json)
+    toggle_task(&state.db, scope, task_id, payload)
+        .await
+        .map(Json)
 }
 
 pub async fn delete_group_task(
@@ -234,7 +236,9 @@ pub async fn toggle_personal_task(
     Json(payload): Json<ToggleRequest>,
 ) -> AppResult<Json<Task>> {
     let scope = Scope::for_personal(&user);
-    toggle_task(&state.db, scope, task_id, payload).await.map(Json)
+    toggle_task(&state.db, scope, task_id, payload)
+        .await
+        .map(Json)
 }
 
 pub async fn delete_personal_task(
@@ -258,7 +262,11 @@ pub async fn clear_personal_done(
 
 // ---------- core CRUD (scope-agnostic) ----------
 
-async fn create_task(state: &AppState, scope: Scope, payload: CreateTaskRequest) -> AppResult<Task> {
+async fn create_task(
+    state: &AppState,
+    scope: Scope,
+    payload: CreateTaskRequest,
+) -> AppResult<Task> {
     payload.validate()?;
 
     // Personal tasks have no assignee concept (the owner is implicit).
@@ -345,13 +353,11 @@ async fn update_task(
                 if let Some(id) = assignee_opt {
                     ensure_member_of(state, group_id, id).await?;
                 }
-                sqlx::query(
-                    "UPDATE tasks SET assigned_to = $1, updated_at = NOW() WHERE id = $2",
-                )
-                .bind(assignee_opt)
-                .bind(task_id)
-                .execute(&state.db)
-                .await?;
+                sqlx::query("UPDATE tasks SET assigned_to = $1, updated_at = NOW() WHERE id = $2")
+                    .bind(assignee_opt)
+                    .bind(task_id)
+                    .execute(&state.db)
+                    .await?;
             }
             Scope::Personal { .. } => {
                 if assignee_opt.is_some() {
@@ -382,9 +388,7 @@ async fn toggle_task(
     payload: ToggleRequest,
 ) -> AppResult<Task> {
     let (scope_sql, owner) = scope_filter(scope, "t", 2);
-    let sql = format!(
-        "SELECT t.is_done FROM tasks t WHERE t.id = $1 AND {scope_sql}",
-    );
+    let sql = format!("SELECT t.is_done FROM tasks t WHERE t.id = $1 AND {scope_sql}",);
     let current: Option<(bool,)> = sqlx::query_as(&sql)
         .bind(task_id)
         .bind(owner)
@@ -440,9 +444,7 @@ async fn clear_done(pool: &PgPool, scope: Scope) -> AppResult<u64> {
 
 async fn ensure_task_in_scope(pool: &PgPool, task_id: Uuid, scope: Scope) -> AppResult<()> {
     let (scope_sql, owner) = scope_filter(scope, "t", 2);
-    let sql = format!(
-        "SELECT t.id FROM tasks t WHERE t.id = $1 AND {scope_sql}",
-    );
+    let sql = format!("SELECT t.id FROM tasks t WHERE t.id = $1 AND {scope_sql}",);
     let row: Option<(Uuid,)> = sqlx::query_as(&sql)
         .bind(task_id)
         .bind(owner)
@@ -479,12 +481,8 @@ fn split_scope(scope: Scope) -> (Option<Uuid>, Option<Uuid>) {
 /// See `shopping::handlers::scope_filter` for the same pattern.
 fn scope_filter(scope: Scope, alias: &str, placeholder: u32) -> (String, Uuid) {
     match scope {
-        Scope::Group { group_id, .. } => {
-            (format!("{alias}.group_id = ${placeholder}"), group_id)
-        }
-        Scope::Personal { user_id } => {
-            (format!("{alias}.owner_user_id = ${placeholder}"), user_id)
-        }
+        Scope::Group { group_id, .. } => (format!("{alias}.group_id = ${placeholder}"), group_id),
+        Scope::Personal { user_id } => (format!("{alias}.owner_user_id = ${placeholder}"), user_id),
     }
 }
 

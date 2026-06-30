@@ -123,11 +123,11 @@ impl Config {
             .unwrap_or_else(|| "friendflow".to_string());
 
         let registration_mode = match std::env::var("REGISTRATION_MODE") {
-            Ok(raw) if !raw.trim().is_empty() => RegistrationMode::parse(&raw).with_context(|| {
-                format!(
-                    "REGISTRATION_MODE must be one of 'approval' or 'open' (got: {raw:?})"
-                )
-            })?,
+            Ok(raw) if !raw.trim().is_empty() => {
+                RegistrationMode::parse(&raw).with_context(|| {
+                    format!("REGISTRATION_MODE must be one of 'approval' or 'open' (got: {raw:?})")
+                })?
+            }
             _ => RegistrationMode::Approval,
         };
 
@@ -172,12 +172,9 @@ impl Config {
 
 fn parse_app_timezone() -> Result<Tz> {
     match std::env::var("APP_TIMEZONE") {
-        Ok(raw) if !raw.trim().is_empty() => raw
-            .trim()
-            .parse::<Tz>()
-            .with_context(|| format!(
-                "APP_TIMEZONE must be a valid IANA zone (e.g. Europe/Berlin, UTC); got {raw:?}"
-            )),
+        Ok(raw) if !raw.trim().is_empty() => raw.trim().parse::<Tz>().with_context(|| {
+            format!("APP_TIMEZONE must be a valid IANA zone (e.g. Europe/Berlin, UTC); got {raw:?}")
+        }),
         _ => Ok(chrono_tz::Europe::Berlin),
     }
 }

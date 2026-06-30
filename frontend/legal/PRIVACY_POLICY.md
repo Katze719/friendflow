@@ -6,7 +6,7 @@
 
 This Privacy Policy describes how personal data is processed when you use **friendflow**, a self-hosted web application for groups (the “Service”). friendflow is typically installed and operated by an independent person or organisation (“**instance operator**”, “**we**” or “**us**” in this policy when referring to whoever runs *your* deployment).
 
-Because friendflow is **self-hosted**, the identity of the controller and contact details depend on **who operates the server you are using**. If you use an instance run by someone else, that operator is responsible for answering questions about your data.
+Because friendflow is **self-hosted**, the identity of the controller and contact details depend on **who operates the server you are using**. The official public friendflow instance is **https://friendflow.site/**. If you use an instance run by someone else, that operator is responsible for answering questions about your data.
 
 ---
 
@@ -41,6 +41,7 @@ Including, for example: group membership, group names and settings, trips, calen
 
 - IP addresses and HTTP requests may appear in server or reverse-proxy logs, depending on how the operator configures hosting.
 - Error and security logs may be retained by the operator for troubleshooting.
+- The friendflow software does not include advertising SDKs, cross-app tracking, or analytics that profile every tap. If an operator adds extra monitoring around their deployment, they should disclose that separately.
 
 ### 3.4 Email (optional)
 
@@ -68,6 +69,8 @@ Security measures (TLS, access control, backups, encryption at rest) depend on *
 
 Retention periods are determined by the instance operator (for example how long logs or backups are kept). Account and content data generally remain until you delete them or the operator removes them according to their policies.
 
+For accounts on the official public instance at **https://friendflow.site/**, deletion is available in the app under **Account settings -> Delete account** and is documented at **/account-deletion**. Account deletion removes sign-in access and personal-only data such as private calendar entries, private tasks, private shopping lists, password reset tokens, and connected Google Calendar tokens. Shared group history may remain with a deleted-user label where other members still rely on that history.
+
 ---
 
 ## 7. Sharing with third parties
@@ -87,6 +90,8 @@ If servers or providers are located outside your country, transfers may occur. M
 ## 9. Your rights
 
 Depending on applicable law, you may have rights to access, rectify, erase, restrict processing, object, or port data, and to withdraw consent where processing is consent-based. To exercise rights, contact **the operator of the instance you use**. If you are unsure who that is, ask the person who gave you the instance URL or invite.
+
+If you use a custom/self-hosted instance, its operator is responsible for privacy requests, support, backups, logs, and account deletion for that server.
 
 ---
 
