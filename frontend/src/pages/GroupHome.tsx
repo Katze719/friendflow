@@ -20,6 +20,7 @@ import type { GroupDetail } from "../api/types";
 import LoadingState from "../components/LoadingState";
 import GroupToolSwitcher from "../components/GroupToolSwitcher";
 import PageHeader from "../components/PageHeader";
+import { useAuth } from "../context/AuthContext";
 import { formatDate } from "../lib/format";
 import { toolPath, tools } from "../tools";
 import { useFavoriteTools } from "../tools/useFavoriteTools";
@@ -31,6 +32,7 @@ export default function GroupHome() {
   const navigate = useNavigate();
   const confirm = useConfirm();
   const toast = useToast();
+  const { user } = useAuth();
   const [group, setGroup] = useState<GroupDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<"code" | "link" | null>(null);
@@ -176,6 +178,27 @@ export default function GroupHome() {
     }
   }
 
+  async function onRemoveMember(member: GroupDetail["members"][number]) {
+    if (!group) return;
+    const ok = await confirm({
+      title: t("group.removeMemberTitle"),
+      message: t("group.removeMemberConfirm", {
+        name: member.display_name,
+        group: group.name,
+      }),
+      confirmLabel: t("group.removeMember"),
+      variant: "danger",
+    });
+    if (!ok) return;
+    try {
+      await groupsApi.removeMember(group.id, member.id);
+      toast.success(t("group.removeMemberDone", { name: member.display_name }));
+      reload();
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : t("common.error"));
+    }
+  }
+
   if (error && !group) {
     return <p className="alert-error">{error}</p>;
   }
@@ -274,24 +297,45 @@ export default function GroupHome() {
         <div className="card p-5">
           <h2 className="font-semibold">{t("group.membersTitle")}</h2>
           <ul className="mt-3 divide-y divide-slate-100 dark:divide-slate-800">
-            {group.members.map((m) => (
+            {group.members.map((m) => {
+              const canRemoveMember =
+                isOwner && m.id !== user?.id && m.role !== "owner";
+              return (
               <li
                 key={m.id}
-                className="flex items-center justify-between py-2 text-sm"
+                className="flex items-center justify-between gap-3 py-2 text-sm"
               >
-                <div>
+                <div className="min-w-0">
                   <p className="font-medium">{m.display_name}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                  <p className="break-words text-xs text-slate-500 dark:text-slate-400">
                     {m.email} - {t("group.joined", { date: formatDate(m.joined_at) })}
                   </p>
                 </div>
-                {m.role === "owner" && (
-                  <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
-                    {t("dashboard.roleOwner")}
-                  </span>
-                )}
+                <div className="flex shrink-0 items-center gap-2">
+                  {m.role === "owner" && (
+                    <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
+                      {t("dashboard.roleOwner")}
+                    </span>
+                  )}
+                  {canRemoveMember && (
+                    <button
+                      type="button"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 dark:text-slate-500 dark:hover:bg-rose-950/40 dark:hover:text-rose-300"
+                      onClick={() => onRemoveMember(m)}
+                      aria-label={t("group.removeMemberAria", {
+                        name: m.display_name,
+                      })}
+                      title={t("group.removeMemberAria", {
+                        name: m.display_name,
+                      })}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
               </li>
-            ))}
+              );
+            })}
           </ul>
         </div>
 

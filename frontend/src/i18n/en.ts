@@ -518,6 +518,12 @@ const en = {
     experimental: "Experimental",
     membersTitle: "Members",
     joined: "joined {{date}}",
+    removeMember: "Remove member",
+    removeMemberAria: "Remove {{name}} from group",
+    removeMemberTitle: "Remove member?",
+    removeMemberConfirm:
+      'Remove "{{name}}" from "{{group}}"? They will lose access to this group and its tools until they rejoin with a new invite.',
+    removeMemberDone: "{{name}} was removed from the group.",
     inviteCode: "Invite code",
     copyCode: "Copy code",
     inviteLink: "Invite link",

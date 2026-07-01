@@ -522,6 +522,12 @@ const de: Translations = {
     experimental: "Experimentell",
     membersTitle: "Mitglieder",
     joined: "beigetreten {{date}}",
+    removeMember: "Mitglied entfernen",
+    removeMemberAria: "{{name}} aus der Gruppe entfernen",
+    removeMemberTitle: "Mitglied entfernen?",
+    removeMemberConfirm:
+      '"{{name}}" aus "{{group}}" entfernen? Die Person verliert Zugriff auf diese Gruppe und ihre Tools, bis sie mit einer neuen Einladung wieder beitritt.',
+    removeMemberDone: "{{name}} wurde aus der Gruppe entfernt.",
     inviteCode: "Einladungscode",
     copyCode: "Code kopieren",
     inviteLink: "Einladungslink",

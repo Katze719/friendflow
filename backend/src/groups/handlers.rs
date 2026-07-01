@@ -372,6 +372,83 @@ pub async fn leave(
     ))
 }
 
+/// Lets a group owner remove another member from the group. Removing yourself
+/// should go through the regular leave flow, which has clearer UX semantics.
+/// If the removed user was the last remaining owner, the earliest-joined
+/// remaining member is promoted so the group never ends up ownerless.
+pub async fn remove_member(
+    State(state): State<AppState>,
+    user: AuthUser,
+    Path((id, member_id)): Path<(Uuid, Uuid)>,
+) -> AppResult<Json<serde_json::Value>> {
+    if member_id == user.id {
+        return Err(AppError::BadRequest(
+            "use leave group to remove yourself".into(),
+        ));
+    }
+
+    let mut tx = state.db.begin().await?;
+
+    let caller_role: Option<(String,)> =
+        sqlx::query_as("SELECT role FROM group_members WHERE group_id = $1 AND user_id = $2")
+            .bind(id)
+            .bind(user.id)
+            .fetch_optional(&mut *tx)
+            .await?;
+    let Some((caller_role,)) = caller_role else {
+        return Err(AppError::Forbidden);
+    };
+    if caller_role != "owner" && !user.is_admin {
+        return Err(AppError::Forbidden);
+    }
+
+    let target_role: Option<(String,)> =
+        sqlx::query_as("SELECT role FROM group_members WHERE group_id = $1 AND user_id = $2")
+            .bind(id)
+            .bind(member_id)
+            .fetch_optional(&mut *tx)
+            .await?;
+    let Some((target_role,)) = target_role else {
+        return Err(AppError::NotFound("member not found".into()));
+    };
+    if target_role == "owner" && !user.is_admin {
+        return Err(AppError::Forbidden);
+    }
+
+    sqlx::query("DELETE FROM group_members WHERE group_id = $1 AND user_id = $2")
+        .bind(id)
+        .bind(member_id)
+        .execute(&mut *tx)
+        .await?;
+
+    if target_role == "owner" {
+        let has_owner: (i64,) = sqlx::query_as(
+            "SELECT COUNT(*)::BIGINT FROM group_members WHERE group_id = $1 AND role = 'owner'",
+        )
+        .bind(id)
+        .fetch_one(&mut *tx)
+        .await?;
+
+        if has_owner.0 == 0 {
+            sqlx::query(
+                "UPDATE group_members SET role = 'owner' \
+                 WHERE user_id = ( \
+                     SELECT user_id FROM group_members \
+                     WHERE group_id = $1 \
+                     ORDER BY joined_at ASC \
+                     LIMIT 1 \
+                 ) AND group_id = $1",
+            )
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
+        }
+    }
+
+    tx.commit().await?;
+    Ok(Json(serde_json::json!({ "ok": true })))
+}
+
 /// Returns the caller's role in the given group, erroring with
 /// `Forbidden` if they are not a member at all.
 async fn role_in_group(

@@ -21,6 +21,10 @@ export const groupsApi = {
       `/api/groups/${id}/leave`,
       { method: "POST" },
     ),
+  removeMember: (id: string, memberId: string) =>
+    api<{ ok: boolean }>(`/api/groups/${id}/members/${memberId}`, {
+      method: "DELETE",
+    }),
   openInvites: (id: string) =>
     api<{ invite_code: string }>(`/api/groups/${id}/invite/open`, {
       method: "POST",

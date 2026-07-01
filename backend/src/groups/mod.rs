@@ -1,7 +1,7 @@
 pub mod handlers;
 
 use axum::{
-    routing::{get, post},
+    routing::{delete, get, post},
     Router,
 };
 use uuid::Uuid;
@@ -14,6 +14,7 @@ pub fn routes() -> Router<AppState> {
         .route("/join", post(handlers::join))
         .route("/:id", get(handlers::detail).delete(handlers::delete_group))
         .route("/:id/leave", post(handlers::leave))
+        .route("/:id/members/:member_id", delete(handlers::remove_member))
         .route("/:id/invite/open", post(handlers::open_invites))
         .route("/:id/invite/close", post(handlers::close_invites))
         // Tool-specific nested routes live under `/:id/<tool>/...`.
