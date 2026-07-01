@@ -45,6 +45,14 @@ const de: Translations = {
     backToDashboard: "Zur Übersicht",
     footer: "friendflow - selbst gehostet für dich und deine Leute",
   },
+  mobileNav: {
+    aria: "Hauptnavigation",
+    home: "Home",
+    calendar: "Kalender",
+    shopping: "Einkauf",
+    tasks: "Tasks",
+    account: "Konto",
+  },
   notFound: {
     title: "Nicht gefunden",
     subtitle: "Diese Seite gibt es nicht.",
@@ -426,6 +434,10 @@ const de: Translations = {
         passwordRequired: "Gib dein aktuelles Passwort ein, um das Konto zu löschen.",
       },
     },
+    about: {
+      title: "Über & Rechtliches",
+      subtitle: "friendflow v{{version}}",
+    },
   },
   dashboard: {
     eyebrow: "Deine Gruppen",
@@ -441,6 +453,9 @@ const de: Translations = {
     personalTasksDescription:
       "Private Aufgaben plus alle Gruppen-Tasks, die dir zugeteilt sind - gebündelt an einem Ort.",
     open: "Öffnen",
+    shortcutsTitle: "Shortcuts",
+    shortcutsHint: "Füge Tools in einer Gruppe mit dem Stern hinzu.",
+    groupOverview: "Gruppenübersicht",
     join: "Beitreten",
     newGroup: "Neue Gruppe",
     memberCount_one: "{{count}} Mitglied",
@@ -451,7 +466,16 @@ const de: Translations = {
     empty: {
       title: "Noch keine Gruppen",
       description:
-        "Leg eine Gruppe für deine WG, einen Urlaub oder deine Crew an - oder tritt mit einem Einladungscode bei.",
+        "Leg eine Gruppe für deine WG, einen Urlaub oder deine Crew an - oder tritt mit einem Einladungscode bei. Deine persönlichen Tools kannst du auch allein nutzen.",
+    },
+    onboarding: {
+      title: "Starte in deinem Tempo",
+      description:
+        "Diese Schritte sind nur Vorschläge. Du kannst den Hinweis schließen und jeden Bereich von friendflow frei nutzen.",
+      profile: "Konto bereit",
+      group: "Gruppe anlegen oder beitreten",
+      tool: "Ersten Shortcut hinzufügen",
+      dismiss: "Ausblenden",
     },
     create: {
       title: "Neue Gruppe",
@@ -459,12 +483,14 @@ const de: Translations = {
       namePlaceholder: "z.B. WG-Kasse",
       currency: "Währung",
       submit: "Anlegen",
+      created: "\"{{name}}\" wurde angelegt.",
     },
     joinForm: {
       title: "Gruppe beitreten",
       code: "Einladungscode",
       codePlaceholder: "ABC12345",
       submit: "Beitreten",
+      joined: "\"{{name}}\" beigetreten.",
     },
     googleCalendarTitle: "Google Kalender",
     googleCalendarDescription:
@@ -490,6 +516,8 @@ const de: Translations = {
     members_one: "{{count}} Mitglied",
     members_other: "{{count}} Mitglieder",
     tools: "Tools",
+    groupOverview: "Gruppenübersicht",
+    toolSwitcherLabel: "Tools in {{name}}",
     open: "Öffnen",
     experimental: "Experimentell",
     membersTitle: "Mitglieder",
@@ -539,8 +567,8 @@ const de: Translations = {
         "Wir arbeiten an neuen Tools für deine Gruppe. Bleib gespannt!",
     },
     toolFavorite: {
-      add: "Oben anpinnen",
-      remove: "Lösen",
+      add: "Zur Home hinzufügen",
+      remove: "Von Home entfernen",
     },
   },
   tools: {

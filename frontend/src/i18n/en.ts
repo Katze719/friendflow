@@ -43,6 +43,14 @@ const en = {
     backToDashboard: "Back to overview",
     footer: "friendflow - self-hosted for you and your people",
   },
+  mobileNav: {
+    aria: "Primary navigation",
+    home: "Home",
+    calendar: "Calendar",
+    shopping: "Shop",
+    tasks: "Tasks",
+    account: "Account",
+  },
   notFound: {
     title: "Not found",
     subtitle: "This page does not exist.",
@@ -422,6 +430,10 @@ const en = {
         passwordRequired: "Enter your current password to delete this account.",
       },
     },
+    about: {
+      title: "About & legal",
+      subtitle: "friendflow v{{version}}",
+    },
   },
   dashboard: {
     eyebrow: "Your groups",
@@ -437,6 +449,9 @@ const en = {
     personalTasksDescription:
       "Private todos plus every group task assigned to you - all in one place.",
     open: "Open",
+    shortcutsTitle: "Shortcuts",
+    shortcutsHint: "Add tools from a group with the star button.",
+    groupOverview: "Group overview",
     join: "Join",
     newGroup: "New group",
     memberCount_one: "{{count}} member",
@@ -447,7 +462,16 @@ const en = {
     empty: {
       title: "No groups yet",
       description:
-        "Create a group for your flat, a trip or your regular crew - or join with an invite code.",
+        "Create a group for your flat, a trip or your regular crew - or join with an invite code. You can still use personal tools on your own.",
+    },
+    onboarding: {
+      title: "Start at your pace",
+      description:
+        "These steps are only suggestions. You can close this and keep using every part of friendflow.",
+      profile: "Account ready",
+      group: "Create or join a group",
+      tool: "Add a first shortcut",
+      dismiss: "Hide",
     },
     create: {
       title: "New group",
@@ -455,12 +479,14 @@ const en = {
       namePlaceholder: "e.g. Flat kitty",
       currency: "Currency",
       submit: "Create",
+      created: "\"{{name}}\" created.",
     },
     joinForm: {
       title: "Join group",
       code: "Invite code",
       codePlaceholder: "ABC12345",
       submit: "Join",
+      joined: "Joined \"{{name}}\".",
     },
     googleCalendarTitle: "Google Calendar",
     googleCalendarDescription:
@@ -486,6 +512,8 @@ const en = {
     members_one: "{{count}} member",
     members_other: "{{count}} members",
     tools: "Tools",
+    groupOverview: "Group overview",
+    toolSwitcherLabel: "{{name}} tools",
     open: "Open",
     experimental: "Experimental",
     membersTitle: "Members",
@@ -535,8 +563,8 @@ const en = {
         "We're working on new tools for your group. Stay tuned!",
     },
     toolFavorite: {
-      add: "Pin to top",
-      remove: "Unpin",
+      add: "Add to Home",
+      remove: "Remove from Home",
     },
   },
   tools: {

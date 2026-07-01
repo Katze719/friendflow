@@ -5,6 +5,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { ApiError } from "../../api/client";
 import { groupsApi } from "../../api/groups";
 import type { GroupDetail, ShoppingItem, ShoppingList } from "../../api/types";
+import GroupToolSwitcher from "../../components/GroupToolSwitcher";
 import LoadingState from "../../components/LoadingState";
 import { shoppingApi, shoppingListsApi } from "./api";
 import ShoppingListView, {
@@ -86,6 +87,9 @@ export default function ShoppingOverviewPage() {
       list={list}
       items={items}
       subtitle={`${group.name} - ${t("shopping.overview.subtitle")}`}
+      headerExtra={
+        <GroupToolSwitcher groupId={group.id} groupName={group.name} />
+      }
       header={
         <Link
           to={`/groups/${group.id}/shopping`}

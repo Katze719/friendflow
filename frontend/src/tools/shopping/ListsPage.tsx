@@ -12,6 +12,7 @@ import { ApiError } from "../../api/client";
 import { groupsApi } from "../../api/groups";
 import type { GroupDetail, ShoppingList } from "../../api/types";
 import LoadingState from "../../components/LoadingState";
+import GroupToolSwitcher from "../../components/GroupToolSwitcher";
 import PageHeader from "../../components/PageHeader";
 import { useConfirm, useToast } from "../../ui/UIProvider";
 import { shoppingListsApi } from "./api";
@@ -92,6 +93,7 @@ export default function ShoppingListsPage() {
           </button>
         }
       />
+      <GroupToolSwitcher groupId={group.id} groupName={group.name} />
 
       {showForm && (
         <NewListForm

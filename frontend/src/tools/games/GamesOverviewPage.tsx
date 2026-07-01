@@ -5,6 +5,7 @@ import { useParams } from "react-router-dom";
 import { ApiError } from "../../api/client";
 import { groupsApi } from "../../api/groups";
 import type { GroupDetail } from "../../api/types";
+import GroupToolSwitcher from "../../components/GroupToolSwitcher";
 import LoadingState from "../../components/LoadingState";
 import PageHeader from "../../components/PageHeader";
 import TournamentsPanel from "./TournamentsPanel";
@@ -46,6 +47,7 @@ export default function GamesOverviewPage() {
         title={t("games.title")}
         subtitle={`${group.name} - ${t("games.subtitle")}`}
       />
+      <GroupToolSwitcher groupId={group.id} groupName={group.name} />
 
       <div className="segmented w-full text-sm sm:w-auto">
         <TabButton

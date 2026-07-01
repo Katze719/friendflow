@@ -128,6 +128,7 @@ export interface ShoppingListViewProps {
   items: ShoppingItem[];
   subtitle: string;
   header: React.ReactNode;
+  headerExtra?: React.ReactNode;
   itemClient: ShoppingItemClient;
   listClient: ShoppingListClient;
   /** Invoked after a successful list rename with the fresh row. */
@@ -151,6 +152,7 @@ export default function ShoppingListView({
   items,
   subtitle,
   header,
+  headerExtra,
   itemClient,
   listClient,
   onListChanged,
@@ -243,6 +245,7 @@ export default function ShoppingListView({
     <div className="space-y-6">
       <div>
         {header}
+        {headerExtra ? <div className="mt-4">{headerExtra}</div> : null}
         <div className="mt-1 flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             {renaming ? (

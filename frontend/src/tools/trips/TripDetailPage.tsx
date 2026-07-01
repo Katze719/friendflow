@@ -12,6 +12,7 @@ import { ApiError } from "../../api/client";
 import { groupsApi } from "../../api/groups";
 import type { GroupDetail, Trip } from "../../api/types";
 import LoadingState from "../../components/LoadingState";
+import GroupToolSwitcher from "../../components/GroupToolSwitcher";
 import PageHeader from "../../components/PageHeader";
 import InfoTab from "./InfoTab";
 import ItineraryTab from "./ItineraryTab";
@@ -136,6 +137,7 @@ export default function TripDetailPage() {
         title={trip.name}
         subtitle={`${group.name} - ${t("trips.overview.subtitle")}`}
       />
+      <GroupToolSwitcher groupId={group.id} groupName={group.name} />
 
       <div
         role="tablist"

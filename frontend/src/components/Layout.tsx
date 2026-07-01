@@ -7,6 +7,7 @@ import { useAuth } from "../context/AuthContext";
 import HeaderMenu from "./HeaderMenu";
 import InstallAppButton from "./InstallAppButton";
 import LanguageSwitcher from "./LanguageSwitcher";
+import MobileBottomNav from "./MobileBottomNav";
 import ThemeSwitcher from "./ThemeSwitcher";
 
 const PENDING_POLL_MS = 60_000;
@@ -153,10 +154,10 @@ export default function Layout({ children }: { children: ReactNode }) {
           </div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-5xl flex-1 px-safe py-6">
+      <main className="mx-auto w-full max-w-5xl flex-1 px-safe py-6 pb-24 sm:pb-6">
         {children}
       </main>
-      <footer className="border-t border-slate-200/70 bg-white/60 pb-safe dark:border-slate-800/70 dark:bg-slate-950/60">
+      <footer className="hidden border-t border-slate-200/70 bg-white/60 pb-safe dark:border-slate-800/70 dark:bg-slate-950/60 sm:block">
         <div className="mx-auto flex max-w-5xl flex-col gap-2 px-safe py-3 text-xs text-slate-500 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between dark:text-slate-400">
           <span>
             {t("layout.footer")}
@@ -186,6 +187,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           </nav>
         </div>
       </footer>
+      {user && <MobileBottomNav />}
     </div>
   );
 }

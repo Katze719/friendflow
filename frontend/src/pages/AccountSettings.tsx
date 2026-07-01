@@ -1,7 +1,7 @@
-import { KeyRound, Trash2, UserRound } from "lucide-react";
+import { FileText, Info, KeyRound, Trash2, UserRound } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ApiError } from "../api/client";
 import { accountApi } from "../api/account";
 import PageHeader from "../components/PageHeader";
@@ -265,6 +265,40 @@ export default function AccountSettings() {
           </div>
         </form>
       </section>
+
+      <section className="card space-y-4 p-5 sm:p-6">
+        <div className="flex items-start gap-3">
+          <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+            <Info className="h-5 w-5" />
+          </span>
+          <div>
+            <h2 className="text-lg font-semibold">{t("account.about.title")}</h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              {t("account.about.subtitle", { version: __APP_VERSION__ })}
+            </p>
+          </div>
+        </div>
+
+        <nav className="grid gap-2 sm:grid-cols-3" aria-label={t("account.about.title")}>
+          <LegalLink to="/privacy" label={t("legal.privacyPolicy")} />
+          <LegalLink to="/account-deletion" label={t("legal.accountDeletion")} />
+          <LegalLink to="/terms" label={t("legal.termsOfService")} />
+        </nav>
+      </section>
     </div>
+  );
+}
+
+function LegalLink({ to, label }: { to: string; label: string }) {
+  return (
+    <Link
+      to={to}
+      className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+    >
+      <span className="inline-flex min-w-0 items-center gap-2">
+        <FileText className="h-4 w-4 shrink-0 text-slate-400" />
+        <span className="truncate">{label}</span>
+      </span>
+    </Link>
   );
 }

@@ -2,13 +2,16 @@ import {
   ArrowRight,
   CalendarPlus,
   CalendarRange,
+  CheckCircle2,
   ClipboardList,
+  Compass,
+  EyeOff,
   Plus,
   ShoppingBasket,
   UserPlus,
   Users,
 } from "lucide-react";
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router-dom";
 import { ApiError } from "../api/client";
@@ -16,7 +19,14 @@ import { groupsApi } from "../api/groups";
 import type { GroupSummary } from "../api/types";
 import LoadingState from "../components/LoadingState";
 import { useAuth } from "../context/AuthContext";
+import {
+  dismissOnboarding,
+  isOnboardingDismissed,
+} from "../lib/onboarding";
 import { readInstanceStorage, writeInstanceStorage } from "../lib/instances";
+import { toolPath, tools } from "../tools";
+import { useFavoriteTools } from "../tools/useFavoriteTools";
+import { useToast } from "../ui/UIProvider";
 
 /**
  * localStorage key for the cached groups list. Lets the dashboard paint the
@@ -68,6 +78,12 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
+  const [revealForm, setRevealForm] = useState(false);
+  const formRegionRef = useRef<HTMLDivElement | null>(null);
+  const [onboardingHidden, setOnboardingHidden] = useState(() =>
+    isOnboardingDismissed(),
+  );
+  const { shortcuts } = useFavoriteTools();
 
   const firstName = user?.display_name.split(" ")[0] ?? "you";
 
@@ -84,6 +100,19 @@ export default function Dashboard() {
   useEffect(() => {
     reload();
   }, [reload]);
+
+  useEffect(() => {
+    if (!revealForm || (!showCreate && !showJoin)) return;
+    formRegionRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+    setRevealForm(false);
+  }, [revealForm, showCreate, showJoin]);
+
+  const hasOpenedTool = shortcuts.length > 0;
+  const showOnboarding =
+    !onboardingHidden && (groups === null || groups.length === 0 || !hasOpenedTool);
 
   return (
     <div className="space-y-8">
@@ -119,28 +148,77 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {showCreate && (
-        <CreateGroupForm
-          onDone={(created) => {
-            setShowCreate(false);
-            if (created) reload();
+      {showOnboarding && (
+        <OnboardingPanel
+          hasGroup={(groups?.length ?? 0) > 0}
+          hasOpenedTool={hasOpenedTool}
+          onCreate={() => {
+            setShowCreate(true);
+            setShowJoin(false);
+          }}
+          onDismiss={() => {
+            dismissOnboarding();
+            setOnboardingHidden(true);
           }}
         />
       )}
-      {showJoin && (
-        <JoinGroupForm
-          onDone={(joined) => {
-            setShowJoin(false);
-            if (joined) reload();
-          }}
-        />
+
+      {(showCreate || showJoin) && (
+        <div ref={formRegionRef} className="scroll-mt-24">
+          {showCreate && (
+            <CreateGroupForm
+              onDone={(created) => {
+                setShowCreate(false);
+                if (created) reload();
+              }}
+            />
+          )}
+          {showJoin && (
+            <JoinGroupForm
+              onDone={(joined) => {
+                setShowJoin(false);
+                if (joined) reload();
+              }}
+            />
+          )}
+        </div>
       )}
 
       {error && (
         <p className="alert-error">{error}</p>
       )}
 
-      <section>
+      {groups && groups.length > 0 && shortcuts.length > 0 && (
+        <ShortcutSection groups={groups} shortcuts={shortcuts} />
+      )}
+
+      <section id="groups" className="scroll-mt-24">
+        <h2 className="mb-3 text-lg font-semibold">{t("dashboard.yourGroups")}</h2>
+        {groups === null ? (
+          <LoadingState compact />
+        ) : groups.length === 0 ? (
+          <EmptyState
+            onCreate={() => {
+              setShowCreate(true);
+              setShowJoin(false);
+              setRevealForm(true);
+            }}
+            onJoin={() => {
+              setShowJoin(true);
+              setShowCreate(false);
+              setRevealForm(true);
+            }}
+          />
+        ) : (
+          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {groups.map((g) => (
+              <GroupCard key={g.id} group={g} />
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section id="personal-tools" className="scroll-mt-24">
         <h2 className="mb-3 text-lg font-semibold">
           {t("dashboard.personalTools")}
         </h2>
@@ -176,22 +254,132 @@ export default function Dashboard() {
           />
         </ul>
       </section>
+    </div>
+  );
+}
 
-      <section>
-        <h2 className="mb-3 text-lg font-semibold">{t("dashboard.yourGroups")}</h2>
-        {groups === null ? (
-          <LoadingState compact />
-        ) : groups.length === 0 ? (
-          <EmptyState />
-        ) : (
-          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {groups.map((g) => (
-              <GroupCard key={g.id} group={g} />
+function ShortcutSection({
+  groups,
+  shortcuts,
+}: {
+  groups: GroupSummary[];
+  shortcuts: ReturnType<typeof useFavoriteTools>["shortcuts"];
+}) {
+  const { t } = useTranslation();
+  const groupById = new Map(groups.map((group) => [group.id, group]));
+  const items = shortcuts
+    .map((item) => {
+      const group = groupById.get(item.groupId);
+      if (!group) return null;
+      const tool = tools.find((candidate) => candidate.id === item.toolId);
+      if (!tool) return null;
+      return { item, group, tool };
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null)
+    .slice(0, 6);
+
+  if (items.length === 0) return null;
+
+  return (
+    <section>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold">{t("dashboard.shortcutsTitle")}</h2>
+        <p className="hidden text-xs text-slate-500 dark:text-slate-400 sm:block">
+          {t("dashboard.shortcutsHint")}
+        </p>
+      </div>
+      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {items.map(({ item, group, tool }) => {
+          const Icon = tool.icon ?? Compass;
+          return (
+            <li key={`${item.groupId}:${item.toolId}`}>
+              <Link
+                to={toolPath(group.id, tool)}
+                className="card flex h-full items-start gap-3 p-4 transition hover:-translate-y-0.5 hover:shadow-md"
+              >
+                <span
+                  className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white ${tool.accent}`}
+                >
+                  <Icon className="h-5 w-5" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold">
+                    {t(tool.nameKey)}
+                  </span>
+                  <span className="mt-0.5 block truncate text-xs text-slate-500 dark:text-slate-400">
+                    {group.name}
+                  </span>
+                  <span className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-brand-600 dark:text-brand-400">
+                    {t("dashboard.open")} <ArrowRight className="h-3.5 w-3.5" />
+                  </span>
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+function OnboardingPanel({
+  hasGroup,
+  hasOpenedTool,
+  onCreate,
+  onDismiss,
+}: {
+  hasGroup: boolean;
+  hasOpenedTool: boolean;
+  onCreate: () => void;
+  onDismiss: () => void;
+}) {
+  const { t } = useTranslation();
+  const steps = [
+    { done: true, label: t("dashboard.onboarding.profile") },
+    { done: hasGroup, label: t("dashboard.onboarding.group") },
+    { done: hasOpenedTool, label: t("dashboard.onboarding.tool") },
+  ];
+
+  return (
+    <section className="rounded-2xl border border-brand-100 bg-brand-50/70 p-4 dark:border-brand-700/60 dark:bg-slate-900 dark:ring-1 dark:ring-brand-500/20">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-brand-700 dark:text-brand-200">
+            {t("dashboard.onboarding.title")}
+          </p>
+          <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-100">
+            {t("dashboard.onboarding.description")}
+          </p>
+          <ul className="mt-3 flex flex-wrap gap-2">
+            {steps.map((step) => (
+              <li
+                key={step.label}
+                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${
+                  step.done
+                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                    : "bg-white text-slate-600 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-600"
+                }`}
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                {step.label}
+              </li>
             ))}
           </ul>
-        )}
-      </section>
-    </div>
+        </div>
+        <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
+          {!hasGroup && (
+            <button type="button" className="btn-primary" onClick={onCreate}>
+              <Plus className="h-4 w-4" />
+              {t("dashboard.newGroup")}
+            </button>
+          )}
+          <button type="button" className="btn-ghost" onClick={onDismiss}>
+            <EyeOff className="h-4 w-4" />
+            {t("dashboard.onboarding.dismiss")}
+          </button>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -280,7 +468,13 @@ function GroupCard({ group }: { group: GroupSummary }) {
   );
 }
 
-function EmptyState() {
+function EmptyState({
+  onCreate,
+  onJoin,
+}: {
+  onCreate: () => void;
+  onJoin: () => void;
+}) {
   const { t } = useTranslation();
   return (
     <div className="card flex flex-col items-center gap-3 p-10 text-center">
@@ -291,6 +485,16 @@ function EmptyState() {
       <p className="max-w-sm text-sm text-slate-500 dark:text-slate-400">
         {t("dashboard.empty.description")}
       </p>
+      <div className="mt-2 flex w-full max-w-sm flex-col gap-2 sm:flex-row">
+        <button type="button" className="btn-primary flex-1" onClick={onCreate}>
+          <Plus className="h-4 w-4" />
+          {t("dashboard.newGroup")}
+        </button>
+        <button type="button" className="btn-secondary flex-1" onClick={onJoin}>
+          <UserPlus className="h-4 w-4" />
+          {t("dashboard.join")}
+        </button>
+      </div>
     </div>
   );
 }
@@ -298,6 +502,7 @@ function EmptyState() {
 function CreateGroupForm({ onDone }: { onDone: (created: boolean) => void }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const toast = useToast();
   const [name, setName] = useState("");
   const [currency, setCurrency] = useState("EUR");
   const [loading, setLoading] = useState(false);
@@ -310,6 +515,7 @@ function CreateGroupForm({ onDone }: { onDone: (created: boolean) => void }) {
     try {
       const g = await groupsApi.create(name.trim(), currency.trim());
       onDone(true);
+      toast.success(t("dashboard.create.created", { name: g.name }));
       navigate(`/groups/${g.id}`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("common.error"));
@@ -368,6 +574,7 @@ function CreateGroupForm({ onDone }: { onDone: (created: boolean) => void }) {
 function JoinGroupForm({ onDone }: { onDone: (joined: boolean) => void }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const toast = useToast();
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -379,6 +586,7 @@ function JoinGroupForm({ onDone }: { onDone: (joined: boolean) => void }) {
     try {
       const g = await groupsApi.join(code.trim());
       onDone(true);
+      toast.success(t("dashboard.joinForm.joined", { name: g.name }));
       navigate(`/groups/${g.id}`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t("common.error"));

@@ -9,6 +9,7 @@ import type {
   TournamentDetail,
   TournamentMatch,
 } from "../../api/types";
+import GroupToolSwitcher from "../../components/GroupToolSwitcher";
 import LoadingState from "../../components/LoadingState";
 import PageHeader from "../../components/PageHeader";
 import { useToast } from "../../ui/UIProvider";
@@ -115,6 +116,7 @@ export default function TournamentDetailPage() {
           `games.status.${detail.status}`,
         )}${detail.team_mode ? ` · ${t("games.detail.teamModeOn")}` : ""}`}
       />
+      <GroupToolSwitcher groupId={group.id} groupName={group.name} />
 
       {isSetup ? (
         <>
