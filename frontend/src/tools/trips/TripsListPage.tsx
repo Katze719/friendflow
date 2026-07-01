@@ -14,6 +14,7 @@ import { groupsApi } from "../../api/groups";
 import type { GroupDetail, Trip } from "../../api/types";
 import HelpBanner from "../../components/HelpBanner";
 import LoadingState from "../../components/LoadingState";
+import GroupToolSwitcher from "../../components/GroupToolSwitcher";
 import PageHeader from "../../components/PageHeader";
 import { formatMoney } from "../../lib/format";
 import { useConfirm, useToast } from "../../ui/UIProvider";
@@ -95,6 +96,7 @@ export default function TripsListPage() {
           </button>
         }
       />
+      <GroupToolSwitcher groupId={group.id} groupName={group.name} />
 
       <HelpBanner
         storageKey="friendflow.banner.tripList"

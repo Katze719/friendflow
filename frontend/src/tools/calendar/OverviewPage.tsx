@@ -10,6 +10,7 @@ import type {
   Trip,
   TripItineraryItem,
 } from "../../api/types";
+import GroupToolSwitcher from "../../components/GroupToolSwitcher";
 import LoadingState from "../../components/LoadingState";
 import { tripsApi } from "../trips/api";
 import { calendarApi } from "./api";
@@ -111,6 +112,9 @@ export default function CalendarOverviewPage() {
         to: `/groups/${group.id}`,
         label: t("calendar.overview.backToGroup"),
       }}
+      headerExtra={
+        <GroupToolSwitcher groupId={group.id} groupName={group.name} />
+      }
       events={mergedEvents}
       categories={categories}
       tripItems={tripItems}

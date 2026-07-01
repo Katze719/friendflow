@@ -1,7 +1,7 @@
 {
   "name": "friendflow-frontend",
   "private": true,
-  "version": "1.1.0-alpha.32",
+  "version": "1.2.9-alpha.47+df176958c",
   "type": "module",
   "scripts": {
     "dev": "vite",

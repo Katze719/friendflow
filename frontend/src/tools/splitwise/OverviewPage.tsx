@@ -20,6 +20,7 @@ import type {
   SplitwiseSummary,
 } from "../../api/types";
 import LoadingState from "../../components/LoadingState";
+import GroupToolSwitcher from "../../components/GroupToolSwitcher";
 import PageHeader from "../../components/PageHeader";
 import { useAuth } from "../../context/AuthContext";
 import { formatDateTime, formatMoney } from "../../lib/format";
@@ -172,6 +173,7 @@ export default function SplitwiseOverviewPage() {
           </div>
         }
       />
+      <GroupToolSwitcher groupId={group.id} groupName={group.name} />
 
       <div className="grid gap-4 md:grid-cols-3">
         <div className="card p-5 md:col-span-1">

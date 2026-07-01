@@ -18,6 +18,7 @@ import { ApiError } from "../api/client";
 import { groupsApi } from "../api/groups";
 import type { GroupDetail } from "../api/types";
 import LoadingState from "../components/LoadingState";
+import GroupToolSwitcher from "../components/GroupToolSwitcher";
 import PageHeader from "../components/PageHeader";
 import { formatDate } from "../lib/format";
 import { toolPath, tools } from "../tools";
@@ -34,17 +35,17 @@ export default function GroupHome() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<"code" | "link" | null>(null);
   const [showQr, setShowQr] = useState(false);
-  const { isFavorite, toggle: toggleFavorite } = useFavoriteTools();
+  const { isShortcut, toggleShortcut } = useFavoriteTools();
 
   // Favorites first, otherwise preserve the declaration order from `tools`.
   const orderedTools = useMemo(() => {
     return [...tools].sort((a, b) => {
-      const af = isFavorite(a.id) ? 0 : 1;
-      const bf = isFavorite(b.id) ? 0 : 1;
+      const af = isShortcut(group?.id ?? "", a.id) ? 0 : 1;
+      const bf = isShortcut(group?.id ?? "", b.id) ? 0 : 1;
       if (af !== bf) return af - bf;
       return tools.indexOf(a) - tools.indexOf(b);
     });
-  }, [isFavorite]);
+  }, [group?.id, isShortcut]);
 
   const inviteUrl = useMemo(() => {
     if (!group?.invite_code) return "";
@@ -189,13 +190,14 @@ export default function GroupHome() {
         title={group.name}
         subtitle={`${t("group.members", { count: group.members.length })} - ${group.currency}`}
       />
+      <GroupToolSwitcher groupId={group.id} groupName={group.name} />
 
       <section>
         <h2 className="mb-3 text-lg font-semibold">{t("group.tools")}</h2>
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {orderedTools.map((tool) => {
             const Icon = tool.icon;
-            const fav = isFavorite(tool.id);
+            const fav = isShortcut(group.id, tool.id);
             return (
               <li key={tool.id} className="relative">
                 <Link
@@ -229,7 +231,7 @@ export default function GroupHome() {
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    toggleFavorite(tool.id);
+                    toggleShortcut(group.id, tool.id);
                   }}
                   aria-pressed={fav}
                   aria-label={

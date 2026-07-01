@@ -70,6 +70,7 @@ export interface CalendarViewProps {
     onToggle: () => void;
     label: string;
   } | null;
+  headerExtra?: React.ReactNode;
   onEventsChanged: () => void;
   onCategoriesChanged: () => void;
 }
@@ -118,6 +119,7 @@ export default function CalendarView({
   tripsById = new Map(),
   groupsById = new Map(),
   overlayToggle,
+  headerExtra,
   onEventsChanged,
   onCategoriesChanged,
 }: CalendarViewProps) {
@@ -298,6 +300,7 @@ export default function CalendarView({
           </button>
         }
       />
+      {headerExtra ? <div>{headerExtra}</div> : null}
 
       {/* Category chips + manager */}
       <div className="flex flex-wrap items-center gap-2">

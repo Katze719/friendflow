@@ -6,6 +6,7 @@ import { ApiError } from "../../api/client";
 import { groupsApi } from "../../api/groups";
 import type { GroupDetail, Task } from "../../api/types";
 import LoadingState from "../../components/LoadingState";
+import GroupToolSwitcher from "../../components/GroupToolSwitcher";
 import PageHeader from "../../components/PageHeader";
 import { useAuth } from "../../context/AuthContext";
 import { useConfirm, useToast } from "../../ui/UIProvider";
@@ -158,6 +159,7 @@ export default function TasksOverviewPage() {
           </button>
         }
       />
+      <GroupToolSwitcher groupId={group.id} groupName={group.name} />
 
       {showAdd && (
         <AddTaskForm

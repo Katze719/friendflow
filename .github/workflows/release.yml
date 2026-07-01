@@ -89,7 +89,7 @@ jobs:
           if-no-files-found: error
 
   android-release:
-    name: Android Release AAB
+    name: Android Release AAB and APK
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -141,7 +141,7 @@ jobs:
         run: |
           printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/release-keystore.jks
 
-      - name: Build signed release AAB
+      - name: Build signed release AAB and APK
         env:
           FRIENDFLOW_UPLOAD_STORE_FILE: release-keystore.jks
           FRIENDFLOW_UPLOAD_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -152,20 +152,23 @@ jobs:
         run: |
           chmod +x android/gradlew
           cd android
-          ./gradlew bundleRelease
+          ./gradlew bundleRelease assembleRelease
 
-      - name: Copy Android artifact
+      - name: Copy Android artifacts
         env:
           TAG: ${{ github.event.release.tag_name }}
         run: |
           mkdir -p ../release-assets
           cp android/app/build/outputs/bundle/release/app-release.aab "../release-assets/friendflow-android-${TAG}.aab"
+          cp android/app/build/outputs/apk/release/app-release.apk "../release-assets/friendflow-android-${TAG}.apk"
 
-      - name: Upload Android artifact
+      - name: Upload Android artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: release-android-aab
-          path: release-assets/*.aab
+          name: release-android
+          path: |
+            release-assets/*.aab
+            release-assets/*.apk
           if-no-files-found: error
 
   ios-simulator:
@@ -246,4 +249,5 @@ jobs:
           files: |
             release-assets/*.tar.gz
             release-assets/*.aab
+            release-assets/*.apk
             release-assets/*.zip
