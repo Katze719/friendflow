@@ -1,0 +1,17 @@
+.env
+.env.*
+!.env.example
+*.log
+
+data
+release-assets
+
+backend/target
+frontend/node_modules
+frontend/dist
+frontend/.vite
+frontend/ios/build
+frontend/android/.gradle
+frontend/android/app/build
+
+.DS_Store

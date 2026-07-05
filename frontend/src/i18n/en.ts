@@ -57,6 +57,7 @@ const en = {
   },
   legal: {
     privacyPolicy: "Privacy policy",
+    support: "Support",
     accountDeletion: "Account deletion",
     termsOfService: "Terms of service",
     backHome: "Home",
@@ -432,7 +433,7 @@ const en = {
     },
     about: {
       title: "About & legal",
-      subtitle: "friendflow v{{version}}",
+      subtitle: "friendflow {{version}}",
     },
   },
   dashboard: {

@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -57,6 +59,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -97,6 +101,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -171,15 +177,19 @@ jobs:
             release-assets/*.apk
           if-no-files-found: error
 
-  ios-simulator:
-    name: iOS Simulator Artifact
+  ios-app-store:
+    name: iOS App Store IPA
     runs-on: macos-latest
     defaults:
       run:
         working-directory: frontend
+    env:
+      APP_BUNDLE_ID: app.friendflow.mobile
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -200,32 +210,185 @@ jobs:
         run: pod install
         working-directory: frontend/ios/App
 
-      - name: Build iOS simulator app
+      - name: Validate iOS release secrets
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          IOS_DISTRIBUTION_CERTIFICATE_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
+          IOS_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+          IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+        run: |
+          test -n "$APPLE_TEAM_ID"
+          test -n "$IOS_DISTRIBUTION_CERTIFICATE_BASE64"
+          test -n "$IOS_DISTRIBUTION_CERTIFICATE_PASSWORD"
+          test -n "$IOS_PROVISIONING_PROFILE_BASE64"
+          test -n "$APP_STORE_CONNECT_API_KEY_ID"
+          test -n "$APP_STORE_CONNECT_API_ISSUER_ID"
+          test -n "$APP_STORE_CONNECT_API_KEY_BASE64"
+
+      - name: Prepare iOS signing assets
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          IOS_DISTRIBUTION_CERTIFICATE_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
+          IOS_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+          IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+        run: |
+          CERTIFICATE_PATH="$RUNNER_TEMP/ios-distribution.p12"
+          PROFILE_PATH="$RUNNER_TEMP/app-store.mobileprovision"
+          PROFILE_PLIST="$RUNNER_TEMP/app-store-profile.plist"
+          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(uuidgen)"
+
+          if ! printf '%s' "$IOS_DISTRIBUTION_CERTIFICATE_BASE64" | base64 --decode > "$CERTIFICATE_PATH" 2>/dev/null; then
+            printf '%s' "$IOS_DISTRIBUTION_CERTIFICATE_BASE64" | base64 -D > "$CERTIFICATE_PATH"
+          fi
+
+          if ! printf '%s' "$IOS_PROVISIONING_PROFILE_BASE64" | base64 --decode > "$PROFILE_PATH" 2>/dev/null; then
+            printf '%s' "$IOS_PROVISIONING_PROFILE_BASE64" | base64 -D > "$PROFILE_PATH"
+          fi
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERTIFICATE_PATH" \
+            -P "$IOS_DISTRIBUTION_CERTIFICATE_PASSWORD" \
+            -A \
+            -t cert \
+            -f pkcs12 \
+            -k "$KEYCHAIN_PATH"
+          security set-key-partition-list \
+            -S apple-tool:,apple:,codesign: \
+            -s \
+            -k "$KEYCHAIN_PASSWORD" \
+            "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
+
+          security cms -D -i "$PROFILE_PATH" > "$PROFILE_PLIST"
+          PROFILE_UUID="$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$PROFILE_PLIST")"
+          PROFILE_NAME="$(/usr/libexec/PlistBuddy -c 'Print :Name' "$PROFILE_PLIST")"
+          PROFILE_TEAM_ID="$(/usr/libexec/PlistBuddy -c 'Print :TeamIdentifier:0' "$PROFILE_PLIST")"
+          PROFILE_APP_ID="$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' "$PROFILE_PLIST")"
+          PROFILE_BUNDLE_ID="${PROFILE_APP_ID#${PROFILE_TEAM_ID}.}"
+
+          if [ "$PROFILE_TEAM_ID" != "$APPLE_TEAM_ID" ]; then
+            echo "Provisioning profile team '$PROFILE_TEAM_ID' does not match APPLE_TEAM_ID '$APPLE_TEAM_ID'."
+            exit 1
+          fi
+
+          if [ "$PROFILE_BUNDLE_ID" != "$APP_BUNDLE_ID" ]; then
+            echo "Provisioning profile bundle id '$PROFILE_BUNDLE_ID' does not match '$APP_BUNDLE_ID'."
+            exit 1
+          fi
+
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
+
+          {
+            echo "IOS_KEYCHAIN_PATH=$KEYCHAIN_PATH"
+            echo "IOS_PROVISIONING_PROFILE_NAME=$PROFILE_NAME"
+          } >> "$GITHUB_ENV"
+
+      - name: Prepare App Store Connect API key
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+        run: |
+          API_KEYS_DIR="$HOME/.appstoreconnect/private_keys"
+          API_KEY_PATH="$API_KEYS_DIR/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
+
+          mkdir -p "$API_KEYS_DIR"
+          if ! printf '%s' "$APP_STORE_CONNECT_API_KEY_BASE64" | base64 --decode > "$API_KEY_PATH" 2>/dev/null; then
+            printf '%s' "$APP_STORE_CONNECT_API_KEY_BASE64" | base64 -D > "$API_KEY_PATH"
+          fi
+          chmod 600 "$API_KEY_PATH"
+
+      - name: Resolve App Store version
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          APP_VERSION="${TAG#v}"
+          APP_VERSION="${APP_VERSION%%-*}"
+          APP_VERSION="${APP_VERSION%%+*}"
+
+          if ! [[ "$APP_VERSION" =~ ^[0-9]+(\.[0-9]+){1,2}$ ]]; then
+            echo "Release tag '$TAG' does not resolve to a valid App Store version. Use tags like v1.0.0."
+            exit 1
+          fi
+
+          echo "APP_VERSION=$APP_VERSION" >> "$GITHUB_ENV"
+
+      - name: Create App Store export options
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          mkdir -p ios/build
+          /usr/libexec/PlistBuddy -c 'Clear dict' ios/build/ExportOptions.plist
+          /usr/libexec/PlistBuddy -c 'Add :method string app-store-connect' ios/build/ExportOptions.plist
+          /usr/libexec/PlistBuddy -c 'Add :teamID string '"$APPLE_TEAM_ID" ios/build/ExportOptions.plist
+          /usr/libexec/PlistBuddy -c 'Add :signingStyle string manual' ios/build/ExportOptions.plist
+          /usr/libexec/PlistBuddy -c 'Add :stripSwiftSymbols bool true' ios/build/ExportOptions.plist
+          /usr/libexec/PlistBuddy -c 'Add :uploadSymbols bool true' ios/build/ExportOptions.plist
+          /usr/libexec/PlistBuddy -c 'Add :provisioningProfiles dict' ios/build/ExportOptions.plist
+          /usr/libexec/PlistBuddy -c 'Add :provisioningProfiles:'"$APP_BUNDLE_ID"' string '"$IOS_PROVISIONING_PROFILE_NAME" ios/build/ExportOptions.plist
+
+      - name: Archive iOS app
         run: |
           xcodebuild \
             -workspace ios/App/App.xcworkspace \
             -scheme App \
-            -configuration Debug \
-            -sdk iphonesimulator \
-            -destination 'generic/platform=iOS Simulator' \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
             -derivedDataPath ios/build \
-            CODE_SIGNING_ALLOWED=NO \
-            build
+            -archivePath ios/build/App.xcarchive \
+            DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
+            PRODUCT_BUNDLE_IDENTIFIER="$APP_BUNDLE_ID" \
+            MARKETING_VERSION="$APP_VERSION" \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            PROVISIONING_PROFILE_SPECIFIER="$IOS_PROVISIONING_PROFILE_NAME" \
+            clean archive
 
-      - name: Copy iOS artifact
+      - name: Export signed IPA
+        run: |
+          xcodebuild \
+            -exportArchive \
+            -archivePath ios/build/App.xcarchive \
+            -exportOptionsPlist ios/build/ExportOptions.plist \
+            -exportPath ios/build/export
+
+      - name: Copy iOS IPA
         env:
           TAG: ${{ github.event.release.tag_name }}
         run: |
           mkdir -p ../release-assets
-          cd ios/build/Build/Products/Debug-iphonesimulator
-          ditto -c -k --sequesterRsrc --keepParent App.app "../../../../../../release-assets/friendflow-ios-${TAG}-simulator-app.zip"
+          IPA_PATH="$(find ios/build/export -type f -name '*.ipa' -print -quit)"
+          test -n "$IPA_PATH"
+          cp "$IPA_PATH" "../release-assets/friendflow-ios-${TAG}.ipa"
 
-      - name: Upload iOS artifact
+      - name: Upload iOS IPA artifact
         uses: actions/upload-artifact@v4
         with:
-          name: release-ios-simulator
-          path: release-assets/*.zip
+          name: release-ios-app-store
+          path: release-assets/*.ipa
           if-no-files-found: error
+
+      - name: Upload IPA to App Store Connect
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          xcrun altool \
+            --upload-app \
+            --type ios \
+            --file "../release-assets/friendflow-ios-${TAG}.ipa" \
+            --apiKey "$APP_STORE_CONNECT_API_KEY_ID" \
+            --apiIssuer "$APP_STORE_CONNECT_API_ISSUER_ID" \
+            --output-format xml
 
   attach:
     name: Attach Assets To Release
@@ -234,7 +397,7 @@ jobs:
       - backend-linux
       - frontend-web
       - android-release
-      - ios-simulator
+      - ios-app-store
     steps:
       - name: Download release artifacts
         uses: actions/download-artifact@v4
@@ -250,4 +413,4 @@ jobs:
             release-assets/*.tar.gz
             release-assets/*.aab
             release-assets/*.apk
-            release-assets/*.zip
+            release-assets/*.ipa

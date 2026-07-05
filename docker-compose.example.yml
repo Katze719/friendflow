@@ -67,9 +67,13 @@ services:
 
   frontend:
     build:
-      context: ./frontend
+      context: .
+      dockerfile: frontend/Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-}
+        # Optional override. When unset, the frontend build uses
+        # `git describe --tags --always --dirty` from this checkout.
+        VITE_APP_VERSION: ${VITE_APP_VERSION:-}
         # "login"   -> unauthenticated visitors are sent straight to the
         #              sign-in form (default, good for private instances).
         # "landing" -> unauthenticated visitors see a public marketing

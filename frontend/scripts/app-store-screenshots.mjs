@@ -1,0 +1,541 @@
+import { spawn } from "node:child_process";
+import { existsSync, mkdirSync } from "node:fs";
+import { writeFile } from "node:fs/promises";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { chromium } from "playwright-core";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const projectRoot = resolve(__dirname, "..");
+const outputDir = resolve(projectRoot, "app-store-screenshots");
+const baseUrl = process.env.SCREENSHOT_BASE_URL || "http://127.0.0.1:5179";
+
+const devices = [
+  {
+    name: "iphone-6-5",
+    viewport: { width: 414, height: 896 },
+    expected: { width: 1242, height: 2688 },
+    scale: 3,
+  },
+  {
+    name: "iphone-6-7",
+    viewport: { width: 428, height: 926 },
+    expected: { width: 1284, height: 2778 },
+    scale: 3,
+  },
+];
+
+const scenes = [
+  {
+    name: "01-dashboard",
+    path: "/",
+    ready: /Gruppen|Groups/i,
+  },
+  {
+    name: "02-trip-planner",
+    path: "/groups/g1/trips/trip1",
+    ready: /Summer in Porto/i,
+  },
+  {
+    name: "03-shopping-list",
+    path: "/groups/g1/shopping/list1",
+    ready: /House Groceries/i,
+  },
+];
+
+const now = "2026-07-05T10:00:00.000Z";
+const user = {
+  id: "u1",
+  email: "paul@example.com",
+  display_name: "Paul",
+  status: "approved",
+  is_admin: false,
+  created_at: "2026-01-10T12:00:00.000Z",
+};
+const members = [
+  member("u1", "Paul", "owner"),
+  member("u2", "Mara"),
+  member("u3", "Luca"),
+  member("u4", "Nina"),
+];
+const group = {
+  id: "g1",
+  name: "Summer House",
+  invite_code: "PORTO26",
+  currency: "EUR",
+  created_by: "u1",
+  created_at: "2026-02-01T12:00:00.000Z",
+  members,
+  my_role: "owner",
+};
+const groupSummary = {
+  id: group.id,
+  name: group.name,
+  invite_code: group.invite_code,
+  currency: group.currency,
+  created_at: group.created_at,
+  member_count: group.members.length,
+  my_role: group.my_role,
+};
+const trip = {
+  id: "trip1",
+  group_id: group.id,
+  name: "Summer in Porto",
+  start_date: "2026-08-14",
+  end_date: "2026-08-18",
+  destinations: [
+    { name: "Porto, Portugal", lat: 41.1579, lng: -8.6291 },
+    { name: "Douro Valley", lat: 41.1677, lng: -7.7893 },
+  ],
+  budget_cents: 120000,
+  spent_cents: 76450,
+  position: 1,
+  created_by: user.id,
+  created_by_display_name: user.display_name,
+  created_at: "2026-06-01T12:00:00.000Z",
+  updated_at: now,
+};
+const tripLinks = [
+  link("l1", "Boutique Hotel Ribeira", "https://example.com/hotel", 5, 0, "Stay"),
+  link("l2", "Douro Boat Tour", "https://example.com/boat", 4, 1, "Activities"),
+  link("l3", "Francesinha Spot", "https://example.com/food", 3, 0, "Food"),
+];
+const itinerary = [
+  itineraryItem("it1", "2026-08-14", "Arrival and check-in", "16:30", "18:00", "Ribeira"),
+  itineraryItem("it2", "2026-08-15", "Douro boat tour", "10:00", "14:00", "Cais da Ribeira"),
+  itineraryItem("it3", "2026-08-16", "Dinner and sunset", "19:30", "22:00", "Jardim do Morro"),
+];
+const packing = [
+  packingItem("p1", "Sunscreen", "1", "Bathroom", true, "u2", "Mara"),
+  packingItem("p2", "Power bank", "2", "Tech", false, null, null),
+  packingItem("p3", "Passport", "all", "Documents", false, null, null),
+];
+const shoppingLists = [
+  list("list1", "House Groceries", 6, 3),
+  list("list2", "Porto Snacks", 4, 1),
+  list("list3", "Bath & Household", 2, 5),
+];
+const shoppingItems = [
+  item("si1", "Oat milk", "2x", "", false, "u2", "Mara"),
+  item("si2", "Pasta", "500 g", "for Tuesday", false, "u3", "Luca"),
+  item("si3", "Tomatoes", "1 kg", "", false, "u1", "Paul"),
+  item("si4", "Coffee", "1 pack", "", false, "u4", "Nina"),
+  item("si5", "Basil", "1 plant", "", false, "u2", "Mara"),
+  item("si6", "Sparkling water", "6 bottles", "", false, "u1", "Paul"),
+  item("si7", "Olive oil", "1", "", true, "u3", "Luca"),
+  item("si8", "Kitchen roll", "2", "", true, "u4", "Nina"),
+  item("si9", "Lemons", "4", "", true, "u2", "Mara"),
+];
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
+
+async function main() {
+  mkdirSync(outputDir, { recursive: true });
+  const server = process.env.SCREENSHOT_BASE_URL ? null : await startVite();
+  const browser = await chromium.launch({
+    executablePath: findChromium(),
+    headless: true,
+    args: ["--no-sandbox", "--disable-dev-shm-usage"],
+  });
+
+  try {
+    const manifest = [];
+    for (const device of devices) {
+      const context = await browser.newContext({
+        viewport: device.viewport,
+        deviceScaleFactor: device.scale,
+        isMobile: true,
+        hasTouch: true,
+        locale: "en-US",
+        colorScheme: "light",
+      });
+      await installDemoState(context);
+      await context.route(`${baseUrl}/api/**`, mockApiRoute);
+
+      for (const scene of scenes) {
+        const page = await context.newPage();
+        page.on("console", (message) => {
+          console.error(`[browser:${scene.name}:${message.type()}] ${message.text()}`);
+        });
+        page.on("pageerror", (error) => {
+          console.error(`[pageerror:${scene.name}] ${error.message}`);
+        });
+        page.on("requestfailed", (request) => {
+          console.error(
+            `[requestfailed:${scene.name}] ${request.method()} ${request.url()} ${request.failure()?.errorText}`,
+          );
+        });
+        await page.goto(`${baseUrl}${scene.path}`, { waitUntil: "networkidle" });
+        try {
+          await page.getByText(scene.ready).first().waitFor({ timeout: 10_000 });
+        } catch (error) {
+          await page.screenshot({
+            path: join(outputDir, `_debug-${device.name}-${scene.name}.png`),
+            fullPage: false,
+          });
+          await writeFile(
+            join(outputDir, `_debug-${device.name}-${scene.name}.html`),
+            await page.content(),
+          );
+          throw error;
+        }
+        await page.waitForTimeout(350);
+
+        const file = join(outputDir, `${device.name}-${scene.name}.png`);
+        await page.screenshot({ path: file, fullPage: false });
+        const size = await imageSize(page);
+        manifest.push({ file, width: size.width, height: size.height });
+        if (size.width !== device.expected.width || size.height !== device.expected.height) {
+          throw new Error(
+            `${file} is ${size.width}x${size.height}, expected ${device.expected.width}x${device.expected.height}`,
+          );
+        }
+        await page.close();
+      }
+      await context.close();
+    }
+    await writeFile(
+      join(outputDir, "manifest.json"),
+      `${JSON.stringify(manifest, null, 2)}\n`,
+    );
+    console.log(`Wrote ${manifest.length} screenshots to ${outputDir}`);
+  } finally {
+    await browser.close();
+    if (server) {
+      server.kill("SIGTERM");
+      await new Promise((resolveDone) => server.once("exit", resolveDone));
+    }
+  }
+}
+
+async function startVite() {
+  const viteBin = resolve(projectRoot, "node_modules/.bin/vite");
+  const child = spawn(
+    viteBin,
+    ["--host", "127.0.0.1", "--port", "5179", "--strictPort"],
+    {
+      cwd: projectRoot,
+      env: { ...process.env, VITE_LANDING_MODE: "landing" },
+      stdio: ["ignore", "pipe", "pipe"],
+    },
+  );
+  child.stdout.on("data", (chunk) => process.stdout.write(chunk));
+  child.stderr.on("data", (chunk) => process.stderr.write(chunk));
+  await waitForServer(baseUrl, child);
+  return child;
+}
+
+async function waitForServer(url, child) {
+  const deadline = Date.now() + 30_000;
+  let exitCode = null;
+  child.once("exit", (code) => {
+    exitCode = code;
+  });
+  while (Date.now() < deadline) {
+    if (exitCode !== null) {
+      throw new Error(`Vite exited before becoming ready (code ${exitCode})`);
+    }
+    try {
+      const response = await fetch(url);
+      if (response.ok) return;
+    } catch {
+      // Server is still starting.
+    }
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, 250));
+  }
+  throw new Error(`Timed out waiting for ${url}`);
+}
+
+function findChromium() {
+  const candidates = [
+    process.env.CHROMIUM_PATH,
+    "/usr/bin/chromium-browser",
+    "/usr/bin/chromium",
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+  ].filter(Boolean);
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return candidate;
+  }
+  throw new Error("No Chromium executable found. Set CHROMIUM_PATH to a Chrome/Chromium binary.");
+}
+
+async function installDemoState(context) {
+  await context.addInitScript(
+    ({ user, groupSummary }) => {
+      const namespace = "default%3A";
+      localStorage.setItem("i18nextLng", "en");
+      localStorage.setItem("friendflow.theme", "light");
+      localStorage.setItem(`friendflow.token.${namespace}`, "app-store-demo-token");
+      localStorage.setItem(`friendflow.user.${namespace}`, JSON.stringify(user));
+      localStorage.setItem(`friendflow.groups.${namespace}`, JSON.stringify([groupSummary]));
+      localStorage.setItem(`friendflow.onboarding.dismissed.${namespace}`, "1");
+      localStorage.setItem(
+        "friendflow.homeToolShortcuts",
+        JSON.stringify([
+          { groupId: groupSummary.id, toolId: "trips", addedAt: "2026-07-01T10:00:00.000Z" },
+          { groupId: groupSummary.id, toolId: "shopping", addedAt: "2026-07-01T10:00:00.000Z" },
+          { groupId: groupSummary.id, toolId: "splitwise", addedAt: "2026-07-01T10:00:00.000Z" },
+        ]),
+      );
+      localStorage.setItem("friendflow.banner.tripList", "1");
+    },
+    { user, groupSummary },
+  );
+}
+
+async function mockApiRoute(route) {
+  const request = route.request();
+  const url = new URL(request.url());
+  const path = url.pathname;
+  const method = request.method();
+
+  if (method !== "GET") {
+    return route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
+  }
+
+  const data = getMock(path);
+  if (data === undefined) {
+    return route.fulfill({
+      status: 404,
+      contentType: "application/json",
+      body: JSON.stringify({ error: `No screenshot mock for ${path}` }),
+    });
+  }
+  return route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify(data),
+  });
+}
+
+function getMock(path) {
+  const staticResponses = {
+    "/api/auth/config": {
+      registration_mode: "open",
+      password_reset_enabled: true,
+      instance_name: "friendflow",
+    },
+    "/api/auth/me": user,
+    "/api/admin/users": [],
+    "/api/groups": [groupSummary],
+    "/api/groups/g1": group,
+    "/api/groups/g1/trips": [trip],
+    "/api/groups/g1/trips/trip1": trip,
+    "/api/groups/g1/trips/trip1/links": tripLinks,
+    "/api/groups/g1/trips/trip1/itinerary": itinerary,
+    "/api/groups/g1/trips/trip1/packing": packing,
+    "/api/groups/g1/shopping/lists": shoppingLists,
+    "/api/groups/g1/shopping/lists/list1/items": shoppingItems,
+    "/api/groups/g1/splitwise/summary": splitwiseSummary(),
+    "/api/groups/g1/splitwise/expenses": splitwiseExpenses(),
+    "/api/groups/g1/splitwise/payments": [],
+    "/api/groups/g1/calendar/events": calendarEvents(),
+    "/api/groups/g1/calendar/categories": calendarCategories(),
+    "/api/me/calendar/events": [],
+  };
+  return staticResponses[path];
+}
+
+async function imageSize(page) {
+  return page.evaluate(() => {
+    return {
+      width: window.innerWidth * window.devicePixelRatio,
+      height: window.innerHeight * window.devicePixelRatio,
+    };
+  });
+}
+
+function member(id, displayName, role = "member") {
+  return {
+    id,
+    display_name: displayName,
+    email: `${displayName.toLowerCase()}@example.com`,
+    role,
+    joined_at: "2026-02-01T12:00:00.000Z",
+  };
+}
+
+function link(id, title, url, likes, dislikes, folderName) {
+  return {
+    id,
+    trip_id: trip.id,
+    url,
+    title,
+    description: "Suggested by the group",
+    image_url: null,
+    site_name: "Example",
+    title_override: null,
+    image_override: null,
+    note: "",
+    added_by: "u2",
+    added_by_display_name: "Mara",
+    created_at: now,
+    fetched_at: now,
+    likes,
+    dislikes,
+    my_vote: likes > 3 ? 1 : 0,
+    folder_id: folderName.toLowerCase(),
+    folder_name: folderName,
+    position: 1,
+  };
+}
+
+function itineraryItem(id, dayDate, title, startTime, endTime, location) {
+  return {
+    id,
+    trip_id: trip.id,
+    day_date: dayDate,
+    title,
+    start_time: startTime,
+    end_time: endTime,
+    location,
+    note: "",
+    link_id: null,
+    link_title: null,
+    link_url: null,
+    position: 1,
+    created_by: "u1",
+    created_by_display_name: "Paul",
+    created_at: now,
+    updated_at: now,
+  };
+}
+
+function packingItem(id, name, quantity, category, isPacked, assignedTo, assignedName) {
+  return {
+    id,
+    trip_id: trip.id,
+    name,
+    quantity,
+    category,
+    is_packed: isPacked,
+    assigned_to: assignedTo,
+    assigned_to_display_name: assignedName,
+    position: 1,
+    created_by: "u1",
+    created_by_display_name: "Paul",
+    created_at: now,
+    updated_at: now,
+  };
+}
+
+function list(id, name, open, done) {
+  return {
+    id,
+    group_id: group.id,
+    owner_user_id: null,
+    name,
+    items_open: open,
+    items_done: done,
+    created_by: user.id,
+    created_at: now,
+  };
+}
+
+function item(id, name, quantity, note, isDone, addedBy, addedByName) {
+  return {
+    id,
+    group_id: group.id,
+    owner_user_id: null,
+    list_id: "list1",
+    name,
+    quantity,
+    note,
+    is_done: isDone,
+    done_at: isDone ? now : null,
+    done_by: isDone ? addedBy : null,
+    done_by_display_name: isDone ? addedByName : null,
+    added_by: addedBy,
+    added_by_display_name: addedByName,
+    created_at: now,
+  };
+}
+
+function splitwiseSummary() {
+  return {
+    currency: "EUR",
+    balances: [
+      { user_id: "u1", display_name: "Paul", balance_cents: 2480 },
+      { user_id: "u2", display_name: "Mara", balance_cents: -1210 },
+      { user_id: "u3", display_name: "Luca", balance_cents: -760 },
+      { user_id: "u4", display_name: "Nina", balance_cents: -510 },
+    ],
+    settlements: [
+      {
+        from_user_id: "u2",
+        from_display_name: "Mara",
+        to_user_id: "u1",
+        to_display_name: "Paul",
+        amount_cents: 1210,
+      },
+      {
+        from_user_id: "u3",
+        from_display_name: "Luca",
+        to_user_id: "u1",
+        to_display_name: "Paul",
+        amount_cents: 760,
+      },
+    ],
+    direct_settlements: [],
+    my_balance_cents: 2480,
+  };
+}
+
+function splitwiseExpenses() {
+  return [
+    {
+      id: "e1",
+      group_id: group.id,
+      paid_by: "u1",
+      paid_by_display_name: "Paul",
+      description: "Supermarkt",
+      amount_cents: 6840,
+      happened_at: "2026-07-04T18:20:00.000Z",
+      created_at: now,
+      trip_id: null,
+      trip_name: null,
+      splits: members.map((m) => ({
+        user_id: m.id,
+        display_name: m.display_name,
+        amount_cents: 1710,
+      })),
+    },
+  ];
+}
+
+function calendarCategories() {
+  return [
+    {
+      id: "cat1",
+      name: "Gruppe",
+      color: "#2563eb",
+      group_id: group.id,
+      owner_user_id: null,
+      created_at: now,
+    },
+  ];
+}
+
+function calendarEvents() {
+  return [
+    {
+      id: "cal1",
+      group_id: group.id,
+      owner_user_id: null,
+      title: "Plan summer party",
+      description: "",
+      location: "House kitchen",
+      starts_at: "2026-07-12T18:00:00.000Z",
+      ends_at: "2026-07-12T20:00:00.000Z",
+      all_day: false,
+      category: { id: "cat1", name: "Gruppe", color: "#2563eb" },
+      created_by: user.id,
+      created_by_display_name: user.display_name,
+      created_at: now,
+      updated_at: now,
+    },
+  ];
+}

@@ -279,8 +279,9 @@ export default function AccountSettings() {
           </div>
         </div>
 
-        <nav className="grid gap-2 sm:grid-cols-3" aria-label={t("account.about.title")}>
+        <nav className="grid gap-2 sm:grid-cols-4" aria-label={t("account.about.title")}>
           <LegalLink to="/privacy" label={t("legal.privacyPolicy")} />
+          <LegalLink to="/support" label={t("legal.support")} />
           <LegalLink to="/account-deletion" label={t("legal.accountDeletion")} />
           <LegalLink to="/terms" label={t("legal.termsOfService")} />
         </nav>

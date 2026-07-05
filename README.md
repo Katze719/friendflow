@@ -123,6 +123,7 @@ deployments need:
 | `SMTP_FROM`          | -              | Mandatory when SMTP is enabled. Bare address (`noreply@example.com`) or full mailbox (`friendflow <noreply@example.com>`).                                              |
 | `LANDING_MODE`       | `login`        | `login` = unauthenticated visitors are sent straight to the sign-in form; `landing` = they see a public marketing page explaining friendflow, with sign-in / sign-up in the top right. |
 | `VITE_API_URL`       | *(empty)*      | Leave empty when running the bundled nginx proxy. Only set for non-docker dev or when packaging a remote API into a native shell.                                       |
+| `VITE_APP_VERSION`   | *(auto)*       | Optional frontend version override. When unset, builds use `git describe --tags --always --dirty`; tagged releases therefore show values like `v1.0.0`.                |
 | `VITE_DEFAULT_INSTANCE_URL` | *(empty)* | Optional default server root URL for Capacitor/mobile builds. When unset, the web app falls back to same-origin.                                                        |
 | `VITE_DEFAULT_INSTANCE_LABEL` | `friendflow` | Label shown for the default mobile login target.                                                                                                                     |
 | `RUST_LOG`           | `info`         | Standard `tracing`/`env_logger` filter string.                                                                                                                          |
@@ -131,7 +132,7 @@ deployments need:
 > friends-only instance leave both at the default; for a public demo set
 > `LANDING_MODE=landing` and `REGISTRATION_MODE=open`.
 
-`LANDING_MODE` and `VITE_API_URL` are baked into the frontend at build
+`LANDING_MODE`, `VITE_API_URL`, and `VITE_APP_VERSION` are baked into the frontend at build
 time, so changing them requires
 `docker compose build frontend && docker compose up -d`. The others read
 live from env on backend start - `docker compose restart backend` is

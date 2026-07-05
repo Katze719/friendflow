@@ -61,7 +61,7 @@ export default function Landing() {
           <span>
             {t("layout.footer")}
             <span className="ml-2 text-slate-400 dark:text-slate-500">
-              v{__APP_VERSION__}
+              {__APP_VERSION__}
             </span>
           </span>
           <div className="flex items-center gap-4">
@@ -91,6 +91,9 @@ export default function Landing() {
             </Link>
             <Link to="/privacy" className="hover:text-slate-900 dark:hover:text-slate-100">
               {t("legal.privacyPolicy")}
+            </Link>
+            <Link to="/support" className="hover:text-slate-900 dark:hover:text-slate-100">
+              {t("legal.support")}
             </Link>
             <Link to="/account-deletion" className="hover:text-slate-900 dark:hover:text-slate-100">
               {t("legal.accountDeletion")}

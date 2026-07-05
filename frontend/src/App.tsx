@@ -23,6 +23,7 @@ import GoogleCalendarIntegration from "./pages/GoogleCalendarIntegration";
 import PersonalTasks from "./pages/PersonalTasks";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Register from "./pages/Register";
+import Support from "./pages/Support";
 import TermsOfService from "./pages/TermsOfService";
 import { tools } from "./tools";
 
@@ -32,6 +33,7 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/privacy" element={<PrivacyPolicy />} />
+      <Route path="/support" element={<Support />} />
       <Route path="/account-deletion" element={<AccountDeletion />} />
       <Route path="/terms" element={<TermsOfService />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />

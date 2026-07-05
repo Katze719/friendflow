@@ -59,6 +59,7 @@ const de: Translations = {
   },
   legal: {
     privacyPolicy: "Datenschutz",
+    support: "Support",
     accountDeletion: "Konto löschen",
     termsOfService: "Nutzungsbedingungen",
     backHome: "Zur Startseite",
@@ -436,7 +437,7 @@ const de: Translations = {
     },
     about: {
       title: "Über & Rechtliches",
-      subtitle: "friendflow v{{version}}",
+      subtitle: "friendflow {{version}}",
     },
   },
   dashboard: {

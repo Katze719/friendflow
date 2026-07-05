@@ -162,7 +162,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           <span>
             {t("layout.footer")}
             <span className="ml-2 text-slate-400 dark:text-slate-500">
-              v{__APP_VERSION__}
+              {__APP_VERSION__}
             </span>
           </span>
           <nav className="flex flex-wrap gap-x-4 gap-y-1">
@@ -171,6 +171,12 @@ export default function Layout({ children }: { children: ReactNode }) {
               className="hover:text-slate-800 dark:hover:text-slate-200"
             >
               {t("legal.privacyPolicy")}
+            </Link>
+            <Link
+              to="/support"
+              className="hover:text-slate-800 dark:hover:text-slate-200"
+            >
+              {t("legal.support")}
             </Link>
             <Link
               to="/account-deletion"
