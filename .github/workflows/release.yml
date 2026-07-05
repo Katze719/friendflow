@@ -333,6 +333,52 @@ jobs:
           /usr/libexec/PlistBuddy -c 'Add :provisioningProfiles dict' ios/build/ExportOptions.plist
           /usr/libexec/PlistBuddy -c 'Add :provisioningProfiles:'"$APP_BUNDLE_ID"' string '"$IOS_PROVISIONING_PROFILE_NAME" ios/build/ExportOptions.plist
 
+      - name: Configure iOS app target signing
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          PROJECT_FILE="ios/App/App.xcodeproj/project.pbxproj"
+          test -f "$PROJECT_FILE"
+
+          node <<'NODE'
+          const fs = require("fs");
+
+          const projectFile = "ios/App/App.xcodeproj/project.pbxproj";
+          const updates = {
+            CODE_SIGN_IDENTITY: '"Apple Distribution"',
+            CODE_SIGN_STYLE: "Manual",
+            CURRENT_PROJECT_VERSION: process.env.GITHUB_RUN_NUMBER,
+            DEVELOPMENT_TEAM: process.env.APPLE_TEAM_ID,
+            MARKETING_VERSION: process.env.APP_VERSION,
+            PRODUCT_BUNDLE_IDENTIFIER: process.env.APP_BUNDLE_ID,
+            PROVISIONING_PROFILE_SPECIFIER: `"${process.env.IOS_PROVISIONING_PROFILE_NAME}"`,
+          };
+
+          let project = fs.readFileSync(projectFile, "utf8");
+          const appConfigsPattern = /(\t\t504EC31[78]1FED79650016851F \/\* (?:Debug|Release) \*\/ = \{\n(?:.*\n)*?\t\t\tbuildSettings = \{\n)([\s\S]*?)(\t\t\t\};)/g;
+          let updatedCount = 0;
+
+          project = project.replace(appConfigsPattern, (match, prefix, settings, suffix) => {
+            updatedCount += 1;
+            for (const [key, value] of Object.entries(updates)) {
+              const line = `\t\t\t\t${key} = ${value};`;
+              const settingPattern = new RegExp(`\\t\\t\\t\\t${key} = .*;`);
+              if (settingPattern.test(settings)) {
+                settings = settings.replace(settingPattern, line);
+              } else {
+                settings += `${line}\n`;
+              }
+            }
+            return `${prefix}${settings}${suffix}`;
+          });
+
+          if (updatedCount !== 2) {
+            throw new Error(`Expected to update 2 App build configurations, updated ${updatedCount}`);
+          }
+
+          fs.writeFileSync(projectFile, project);
+          NODE
+
       - name: Archive iOS app
         run: |
           xcodebuild \
@@ -343,13 +389,6 @@ jobs:
             -destination 'generic/platform=iOS' \
             -derivedDataPath ios/build \
             -archivePath ios/build/App.xcarchive \
-            DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
-            PRODUCT_BUNDLE_IDENTIFIER="$APP_BUNDLE_ID" \
-            MARKETING_VERSION="$APP_VERSION" \
-            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
-            CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
-            PROVISIONING_PROFILE_SPECIFIER="$IOS_PROVISIONING_PROFILE_NAME" \
             clean archive
 
       - name: Export signed IPA
