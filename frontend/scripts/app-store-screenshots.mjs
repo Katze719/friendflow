@@ -23,6 +23,20 @@ const devices = [
     expected: { width: 1284, height: 2778 },
     scale: 3,
   },
+  {
+    name: "ipad-12-9",
+    viewport: { width: 1024, height: 1366 },
+    expected: { width: 2048, height: 2732 },
+    scale: 2,
+    isMobile: false,
+  },
+  {
+    name: "ipad-13",
+    viewport: { width: 1032, height: 1376 },
+    expected: { width: 2064, height: 2752 },
+    scale: 2,
+    isMobile: false,
+  },
 ];
 
 const scenes = [
@@ -147,7 +161,7 @@ async function main() {
       const context = await browser.newContext({
         viewport: device.viewport,
         deviceScaleFactor: device.scale,
-        isMobile: true,
+        isMobile: device.isMobile ?? true,
         hasTouch: true,
         locale: "en-US",
         colorScheme: "light",
