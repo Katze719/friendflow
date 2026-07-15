@@ -38,7 +38,7 @@ export default function Register() {
   }
 
   return (
-    <div className="mx-auto flex min-h-full max-w-md flex-col justify-center py-12">
+    <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col justify-center px-4 py-8 sm:min-h-full sm:px-0 sm:py-12">
       <Link
         to="/"
         className="mx-auto mb-6 flex flex-col items-center gap-3 text-slate-900 dark:text-slate-100"
@@ -55,7 +55,7 @@ export default function Register() {
       <div className="card p-6 sm:p-8">
         <h1 className="text-2xl font-semibold tracking-tight">{t("auth.register.title")}</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t("auth.register.subtitle")}</p>
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+        <div className="mt-5 flex flex-col items-start gap-3">
           <InstanceBadge />
           <InstanceSwitcher />
         </div>
@@ -124,7 +124,7 @@ export default function Register() {
       <div className="mt-4 flex justify-center">
         <InstallAppButton variant="ghost" />
       </div>
-      <nav className="mt-6 flex flex-wrap justify-center gap-x-4 gap-y-1 text-center text-xs text-slate-500 dark:text-slate-400">
+      <nav className="mt-6 grid w-full grid-cols-2 justify-items-center gap-x-3 gap-y-2 text-center text-xs text-slate-500 sm:flex sm:w-auto sm:flex-wrap sm:justify-center sm:gap-x-4 sm:gap-y-1 dark:text-slate-400">
         <Link className="hover:text-slate-800 dark:hover:text-slate-200" to="/privacy">
           {t("legal.privacyPolicy")}
         </Link>

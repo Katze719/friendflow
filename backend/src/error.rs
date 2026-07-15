@@ -26,6 +26,14 @@ pub enum AppError {
     #[error("account pending approval")]
     AccountPending,
 
+    // Prepared for endpoints that cannot safely serve older installed apps.
+    #[allow(dead_code)]
+    #[error("app update required")]
+    AppUpdateRequired {
+        minimum_supported_app_version: Option<String>,
+        latest_app_version: Option<String>,
+    },
+
     #[error(transparent)]
     Sqlx(#[from] sqlx::Error),
 
@@ -56,6 +64,11 @@ impl IntoResponse for AppError {
                 "account_pending",
                 "account pending approval".into(),
             ),
+            AppError::AppUpdateRequired { .. } => (
+                StatusCode::UPGRADE_REQUIRED,
+                "app_update_required",
+                "this app version is no longer supported by this server".into(),
+            ),
             AppError::Validation(e) => (StatusCode::BAD_REQUEST, "validation", e.to_string()),
             AppError::Sqlx(e) => {
                 tracing::error!(error = ?e, "sqlx error");
@@ -80,7 +93,21 @@ impl IntoResponse for AppError {
             }
         };
 
-        (status, Json(json!({ "error": message, "code": code }))).into_response()
+        let mut body = json!({ "error": message, "code": code });
+        if let AppError::AppUpdateRequired {
+            minimum_supported_app_version,
+            latest_app_version,
+        } = self
+        {
+            if let Some(minimum_supported_app_version) = minimum_supported_app_version {
+                body["minimum_supported_app_version"] = json!(minimum_supported_app_version);
+            }
+            if let Some(latest_app_version) = latest_app_version {
+                body["latest_app_version"] = json!(latest_app_version);
+            }
+        }
+
+        (status, Json(body)).into_response()
     }
 }
 

@@ -74,6 +74,21 @@ const de: Translations = {
       hint: "Admin-Freigabe nötig",
     },
   },
+  appUpdate: {
+    currentVersion: "Aktuelle App-Version",
+    requiredVersion: "Benötigte Version",
+    unknownVersion: "Unbekannt",
+    updateAction: "App aktualisieren",
+    reloadAction: "App neu laden",
+    required: {
+      title: "Update erforderlich",
+      body:
+        "Dieser Server wurde aktualisiert und unterstützt deine installierte App-Version nicht mehr. Aktualisiere die App, um fortzufahren.",
+    },
+    available: {
+      body: "Eine neuere App-Version ist verfügbar.",
+    },
+  },
   landing: {
     nav: {
       signIn: "Anmelden",

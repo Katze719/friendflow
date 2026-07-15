@@ -39,7 +39,7 @@ export default function Login() {
   }
 
   return (
-    <div className="mx-auto flex min-h-full max-w-md flex-col justify-center py-12">
+    <div className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col justify-center px-4 py-8 sm:min-h-full sm:px-0 sm:py-12">
       <Link
         to="/"
         className="mx-auto mb-6 flex flex-col items-center gap-3 text-slate-900 dark:text-slate-100"
@@ -56,7 +56,7 @@ export default function Login() {
       <div className="card p-6 sm:p-8">
         <h1 className="text-2xl font-semibold tracking-tight">{t("auth.login.title")}</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{t("auth.login.subtitle")}</p>
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+        <div className="mt-5 flex flex-col items-start gap-3">
           <InstanceBadge />
           <InstanceSwitcher />
         </div>
@@ -76,11 +76,11 @@ export default function Login() {
           </div>
           <div className="space-y-1">
             <div className="flex items-baseline justify-between gap-2">
-              <label className="label" htmlFor="password">{t("auth.fields.password")}</label>
+              <label className="label min-w-0" htmlFor="password">{t("auth.fields.password")}</label>
               {authConfig?.password_reset_enabled && (
                 <Link
                   to="/forgot-password"
-                  className="text-xs font-medium text-brand-600 hover:underline dark:text-brand-400"
+                  className="shrink-0 whitespace-nowrap text-xs font-medium text-brand-600 hover:underline dark:text-brand-400"
                 >
                   {t("auth.login.forgotPassword")}
                 </Link>
@@ -120,7 +120,7 @@ export default function Login() {
       <div className="mt-4 flex justify-center">
         <InstallAppButton variant="ghost" />
       </div>
-      <nav className="mt-6 flex flex-wrap justify-center gap-x-4 gap-y-1 text-center text-xs text-slate-500 dark:text-slate-400">
+      <nav className="mt-6 grid w-full grid-cols-2 justify-items-center gap-x-3 gap-y-2 text-center text-xs text-slate-500 sm:flex sm:w-auto sm:flex-wrap sm:justify-center sm:gap-x-4 sm:gap-y-1 dark:text-slate-400">
         <Link className="hover:text-slate-800 dark:hover:text-slate-200" to="/privacy">
           {t("legal.privacyPolicy")}
         </Link>

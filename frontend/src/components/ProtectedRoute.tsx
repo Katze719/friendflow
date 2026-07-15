@@ -1,10 +1,13 @@
 import type { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useAppCompatibility } from "../lib/appCompatibility";
+import AppUpdateRequired from "./AppUpdateRequired";
 import LoadingState from "./LoadingState";
 
 export default function ProtectedRoute({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
+  const compatibility = useAppCompatibility();
   const location = useLocation();
 
   if (loading) {
@@ -12,6 +15,9 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
   }
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+  if (compatibility.status === "update_required") {
+    return <AppUpdateRequired />;
   }
   return <>{children}</>;
 }

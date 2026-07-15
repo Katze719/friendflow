@@ -72,6 +72,21 @@ const en = {
       hint: "admin approval required",
     },
   },
+  appUpdate: {
+    currentVersion: "Current app version",
+    requiredVersion: "Required version",
+    unknownVersion: "Unknown",
+    updateAction: "Update app",
+    reloadAction: "Reload app",
+    required: {
+      title: "Update required",
+      body:
+        "This server has been updated and no longer supports your installed app version. Update the app to continue.",
+    },
+    available: {
+      body: "A newer app version is available.",
+    },
+  },
   landing: {
     nav: {
       signIn: "Sign in",

@@ -115,6 +115,11 @@ deployments need:
 | `INSTANCE_NAME`      | `friendflow`   | Public instance label shown on auth screens and used as the display name when mobile clients validate this server.                                                      |
 | `REGISTRATION_MODE`  | `approval`     | `approval` = new sign-ups wait for an admin; `open` = new sign-ups are auto-approved and can log in immediately.                                                        |
 | `APP_BASE_URL`       | first `CORS_ORIGIN` | Public URL of the frontend. Used to build clickable links in outbound emails (currently only password reset).                                                     |
+| `APP_MIN_SUPPORTED_VERSION` | *(empty)* | Optional minimum mobile/web client version accepted by this backend. Older logged-in clients show an update-required screen. Leave empty unless you intentionally drop old app support. |
+| `APP_LATEST_VERSION` | build version  | Optional override for the newest published app version shown as a non-blocking update hint. When unset, `/api/app/version` uses the backend build's git-derived version. |
+| `APP_IOS_STORE_URL`  | *(empty)*      | Optional iOS App Store URL used by update prompts.                                                                                                                      |
+| `APP_ANDROID_STORE_URL` | *(empty)*   | Optional Google Play URL used by update prompts.                                                                                                                        |
+| `APP_UPDATE_MESSAGE` | *(empty)*      | Optional custom message for the update-required screen.                                                                                                                 |
 | `SMTP_HOST`          | *(empty)*      | Hostname of the SMTP relay for transactional emails. Leaving it empty disables password recovery; the "Forgot password?" link won't appear on the login screen.         |
 | `SMTP_PORT`          | `587` / `465` / `25` | SMTP port. Defaults pick sensibly based on `SMTP_ENCRYPTION`.                                                                                                     |
 | `SMTP_ENCRYPTION`    | `starttls`     | `starttls` (upgrade on port 587), `tls` (implicit TLS, usually 465) or `none` (plaintext, dev only).                                                                    |
@@ -299,6 +304,27 @@ instance from a secondary button in the auth flow.
 Optional native packaging overrides:
 - `CAPACITOR_APP_ID` for the Android/iOS bundle id
 - `CAPACITOR_APP_NAME` for the app name shown by the native shell
+
+### App/backend compatibility
+
+Backend updates should remain compatible with the currently published
+mobile app. Adding endpoints or response fields is fine; removing fields,
+changing auth/URL flows, or changing semantics that existing apps rely on
+needs a transition period.
+
+The backend exposes public compatibility metadata at `/api/app/version`.
+Docker builds inject the same git-derived version style that the frontend
+uses (`git describe --tags --always --dirty`); when `APP_LATEST_VERSION`
+is unset, the endpoint uses that backend build version as the latest app
+version. Logged-in clients check the endpoint on app start, when the app
+regains focus, and periodically while a session is active. If
+`APP_MIN_SUPPORTED_VERSION` is higher than the running client version,
+protected screens are replaced by an update-required view while the local
+session is kept intact. If only the latest version is higher, the app shows
+a non-blocking update banner.
+
+Leave `APP_MIN_SUPPORTED_VERSION` unset unless a backend release really
+cannot support older installed apps anymore.
 
 ### GitHub release builds
 

@@ -20,7 +20,10 @@ services:
 
   backend:
     build:
-      context: ./backend
+      context: .
+      dockerfile: backend/Dockerfile
+      args:
+        FRIENDFLOW_APP_VERSION: ${FRIENDFLOW_APP_VERSION:-}
     restart: unless-stopped
     depends_on:
       db:

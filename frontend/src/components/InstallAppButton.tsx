@@ -1,3 +1,4 @@
+import { Capacitor } from "@capacitor/core";
 import { Download, Share, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
@@ -61,7 +62,11 @@ export default function InstallAppButton({
     };
   }, []);
 
-  if (installed) return null;
+  // Capacitor apps are already installed. Checking through Capacitor's API is
+  // more reliable than inferring this from the iOS user agent: native WKWebView
+  // uses the same user agent family as Safari, which otherwise exposed the
+  // browser-only "Install app" action inside the App Store build.
+  if (Capacitor.isNativePlatform() || installed) return null;
 
   const ios = isIos();
   // Android/Chromium: only show once the browser has deemed the site installable.

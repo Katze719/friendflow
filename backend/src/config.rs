@@ -96,10 +96,20 @@ pub struct Config {
     /// recovery).
     pub smtp: Option<SmtpConfig>,
     pub google_calendar: Option<GoogleCalendarOAuth>,
+    pub app_version: AppVersionConfig,
     /// IANA timezone used when mapping all-day calendar instants (stored as UTC)
     /// to calendar dates for Google Calendar `date` fields. Align with where most
     /// users pick dates in the UI (browser local → UTC); default Europe/Berlin.
     pub app_timezone: Tz,
+}
+
+#[derive(Debug, Clone)]
+pub struct AppVersionConfig {
+    pub minimum_supported_app_version: Option<String>,
+    pub latest_app_version: Option<String>,
+    pub ios_store_url: Option<String>,
+    pub android_store_url: Option<String>,
+    pub update_message: Option<String>,
 }
 
 impl Config {
@@ -152,6 +162,8 @@ impl Config {
 
         let google_calendar = parse_google_calendar_oauth()?;
 
+        let app_version = parse_app_version_config();
+
         let app_timezone = parse_app_timezone()?;
 
         Ok(Self {
@@ -165,9 +177,27 @@ impl Config {
             app_base_url,
             smtp,
             google_calendar,
+            app_version,
             app_timezone,
         })
     }
+}
+
+fn parse_app_version_config() -> AppVersionConfig {
+    AppVersionConfig {
+        minimum_supported_app_version: optional_env("APP_MIN_SUPPORTED_VERSION"),
+        latest_app_version: optional_env("APP_LATEST_VERSION"),
+        ios_store_url: optional_env("APP_IOS_STORE_URL"),
+        android_store_url: optional_env("APP_ANDROID_STORE_URL"),
+        update_message: optional_env("APP_UPDATE_MESSAGE"),
+    }
+}
+
+fn optional_env(key: &str) -> Option<String> {
+    std::env::var(key)
+        .ok()
+        .map(|v| v.trim().to_string())
+        .filter(|v| !v.is_empty())
 }
 
 fn parse_app_timezone() -> Result<Tz> {

@@ -3,7 +3,9 @@ import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import Layout from "./components/Layout";
 import LoadingState from "./components/LoadingState";
 import ProtectedRoute from "./components/ProtectedRoute";
+import AppUpdateRequired from "./components/AppUpdateRequired";
 import { useAuth } from "./context/AuthContext";
+import { useAppCompatibility } from "./lib/appCompatibility";
 import { isLandingModeEnabled } from "./lib/landingMode";
 import AdminUsers from "./pages/AdminUsers";
 import AccountDeletion from "./pages/AccountDeletion";
@@ -92,12 +94,16 @@ export default function App() {
 
 function RootGate() {
   const { user, loading } = useAuth();
+  const compatibility = useAppCompatibility();
   const location = useLocation();
 
   if (loading) {
     return <LoadingState fullHeight />;
   }
   if (user) {
+    if (compatibility.status === "update_required") {
+      return <AppUpdateRequired />;
+    }
     return (
       <Layout>
         <Dashboard />

@@ -1,4 +1,5 @@
 import { buildApiUrl, getActiveInstance, readInstanceStorage, writeInstanceStorage } from "../lib/instances";
+import { emitAppUpdateRequired } from "../lib/appCompatibilityEvents";
 
 export function getToken(): string | null {
   return readInstanceStorage("token");
@@ -29,6 +30,7 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
   const { method = "GET", body, auth = true, signal } = options;
 
   const headers: Record<string, string> = {};
+  headers["X-Friendflow-App-Version"] = __APP_VERSION__;
   if (body !== undefined) headers["Content-Type"] = "application/json";
   if (auth) {
     const token = getToken();
@@ -53,6 +55,19 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
     const message =
       (obj && typeof obj.error === "string" ? (obj.error as string) : null) ?? `HTTP ${res.status}`;
     const code = obj && typeof obj.code === "string" ? (obj.code as string) : null;
+    if (res.status === 426 && code === "app_update_required") {
+      emitAppUpdateRequired({
+        minimum_supported_app_version:
+          obj && typeof obj.minimum_supported_app_version === "string"
+            ? obj.minimum_supported_app_version
+            : undefined,
+        latest_app_version:
+          obj && typeof obj.latest_app_version === "string"
+            ? obj.latest_app_version
+            : undefined,
+        message: obj && typeof obj.message === "string" ? obj.message : undefined,
+      });
+    }
     if (res.status === 401) setToken(null);
     throw new ApiError(res.status, message, code);
   }

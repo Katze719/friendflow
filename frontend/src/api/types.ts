@@ -28,6 +28,15 @@ export interface AuthConfig {
   instance_name?: string;
 }
 
+export interface AppVersionInfo {
+  backend_version: string;
+  minimum_supported_app_version?: string;
+  latest_app_version?: string;
+  ios_store_url?: string;
+  android_store_url?: string;
+  message?: string;
+}
+
 export interface GroupSummary {
   id: string;
   name: string;

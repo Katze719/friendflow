@@ -6,7 +6,11 @@
 
 use std::net::SocketAddr;
 
-use axum::{http::HeaderValue, routing::get, Router};
+use axum::{
+    http::{HeaderName, HeaderValue},
+    routing::get,
+    Router,
+};
 use clap::Parser;
 use tower_http::{
     compression::CompressionLayer,
@@ -16,6 +20,7 @@ use tower_http::{
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 mod admin;
+mod app_version;
 mod auth;
 mod calendar;
 mod cli;
@@ -65,6 +70,7 @@ async fn serve(cfg: config::Config) -> anyhow::Result<()> {
 
     let app = Router::new()
         .route("/api/health", get(health))
+        .nest("/api/app", app_version::routes())
         .route(
             "/api/auth/google-calendar/callback",
             get(google_calendar::oauth_callback),
@@ -142,6 +148,7 @@ fn build_cors(origin: &str) -> CorsLayer {
         .allow_headers([
             axum::http::header::AUTHORIZATION,
             axum::http::header::CONTENT_TYPE,
+            HeaderName::from_static("x-friendflow-app-version"),
         ])
         .allow_methods([
             axum::http::Method::GET,

@@ -1,9 +1,10 @@
-import { Home, LogOut, Settings, Shield } from "lucide-react";
+import { Home, LogOut, RefreshCw, Settings, Shield, X } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { adminApi } from "../api/admin";
 import { useAuth } from "../context/AuthContext";
+import { useAppCompatibility } from "../lib/appCompatibility";
 import HeaderMenu from "./HeaderMenu";
 import InstallAppButton from "./InstallAppButton";
 import LanguageSwitcher from "./LanguageSwitcher";
@@ -14,11 +15,13 @@ const PENDING_POLL_MS = 60_000;
 
 export default function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
+  const compatibility = useAppCompatibility();
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation();
   const isAdmin = !!user?.is_admin;
   const [pendingCount, setPendingCount] = useState(0);
+  const [updateBannerDismissed, setUpdateBannerDismissed] = useState(false);
   // Hide the shortcut on the dashboard itself - otherwise the primary
   // CTA would just take you to the page you're already on.
   const onDashboard = location.pathname === "/";
@@ -154,6 +157,47 @@ export default function Layout({ children }: { children: ReactNode }) {
           </div>
         </div>
       </header>
+      {compatibility.status === "update_available" && !updateBannerDismissed && (
+        <div className="border-b border-amber-200 bg-amber-50 px-safe py-2 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100">
+          <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2">
+            <span>
+              {t("appUpdate.available.body", {
+                version: compatibility.info?.latest_app_version ?? "",
+              })}
+            </span>
+            <div className="flex items-center gap-1">
+              {compatibility.updateUrl ? (
+                <a
+                  className="btn-ghost h-8 px-2 text-xs"
+                  href={compatibility.updateUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  {t("appUpdate.updateAction")}
+                </a>
+              ) : (
+                <button
+                  className="btn-ghost h-8 px-2 text-xs"
+                  type="button"
+                  onClick={() => window.location.reload()}
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  {t("appUpdate.reloadAction")}
+                </button>
+              )}
+              <button
+                className="btn-ghost h-8 px-2 text-xs"
+                type="button"
+                onClick={() => setUpdateBannerDismissed(true)}
+                aria-label={t("common.dismiss")}
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <main className="mx-auto w-full max-w-5xl flex-1 px-safe py-6 pb-24 sm:pb-6">
         {children}
       </main>
