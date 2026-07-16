@@ -125,9 +125,9 @@ export default function Dashboard() {
             </h1>
             <p className="mt-2 max-w-2xl text-slate-600 dark:text-slate-300">{t("dashboard.subtitle")}</p>
           </div>
-          <div className="flex w-full gap-2 sm:w-auto">
+          <div className="grid w-full min-w-0 grid-cols-2 gap-2 sm:flex sm:w-auto">
             <button
-              className="btn-secondary flex-1 sm:flex-none"
+              className="btn-secondary min-w-0 sm:flex-none"
               onClick={() => {
                 setShowJoin((v) => !v);
                 setShowCreate(false);
@@ -136,7 +136,7 @@ export default function Dashboard() {
               <UserPlus className="h-4 w-4" /> {t("dashboard.join")}
             </button>
             <button
-              className="btn-primary flex-1 sm:flex-none"
+              className="btn-primary min-w-0 sm:flex-none"
               onClick={() => {
                 setShowCreate((v) => !v);
                 setShowJoin(false);
@@ -354,19 +354,19 @@ function OnboardingPanel({
             {steps.map((step) => (
               <li
                 key={step.label}
-                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${
+                className={`inline-flex max-w-full min-w-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${
                   step.done
                     ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
                     : "bg-white text-slate-600 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-600"
                 }`}
               >
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                {step.label}
+                <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                <span className="min-w-0 break-words">{step.label}</span>
               </li>
             ))}
           </ul>
         </div>
-        <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
+        <div className="flex min-w-0 flex-wrap gap-2 sm:shrink-0 sm:justify-end">
           {!hasGroup && (
             <button type="button" className="btn-primary" onClick={onCreate}>
               <Plus className="h-4 w-4" />
@@ -477,7 +477,7 @@ function EmptyState({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="card flex flex-col items-center gap-3 p-10 text-center">
+    <div className="card flex min-w-0 flex-col items-center gap-3 p-6 text-center sm:p-10">
       <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand-600 dark:bg-brand-900/40 dark:text-brand-300">
         <Users className="h-6 w-6" />
       </div>

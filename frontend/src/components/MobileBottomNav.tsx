@@ -48,29 +48,32 @@ export default function MobileBottomNav() {
   return (
     <nav
       aria-label={t("mobileNav.aria")}
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200/80 bg-white/95 px-safe pb-safe shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur sm:hidden dark:border-slate-800/80 dark:bg-slate-950/95"
+      className="fixed bottom-0 left-0 right-auto z-30 w-screen max-w-full overflow-hidden border-t border-slate-200/80 bg-white/95 px-safe pb-safe shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur sm:hidden dark:border-slate-800/80 dark:bg-slate-950/95"
     >
-      <div className="grid h-16 grid-cols-5">
+      <div className="grid h-[64px] min-w-0 grid-cols-5">
         {items.map(({ to, label, icon: Icon, active }) => (
           <Link
             key={to}
             to={to}
-            className={`flex min-w-0 flex-col items-center justify-center gap-1 text-[11px] font-medium transition ${
+            title={label}
+            className={`flex min-w-0 max-w-full flex-col items-center justify-center gap-[4px] overflow-hidden text-[11px] font-medium transition ${
               active
                 ? "text-brand-600 dark:text-brand-400"
                 : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
             }`}
           >
             <span
-              className={`inline-flex h-8 w-10 items-center justify-center rounded-full ${
+              className={`inline-flex h-[32px] w-[40px] shrink-0 items-center justify-center rounded-full ${
                 active
                   ? "bg-brand-50 dark:bg-brand-900/40"
                   : "bg-transparent"
               }`}
             >
-              <Icon className="h-4 w-4" />
+              <Icon className="h-[16px] w-[16px]" />
             </span>
-            <span className="max-w-full truncate px-1">{label}</span>
+            <span className="block w-full min-w-0 truncate px-[4px] text-center leading-none">
+              {label}
+            </span>
           </Link>
         ))}
       </div>

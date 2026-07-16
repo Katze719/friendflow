@@ -42,11 +42,11 @@ export default function HeaderMenu() {
   }, [open]);
 
   return (
-    <div className="relative sm:hidden">
+    <div className="relative shrink-0 sm:hidden">
       <button
         ref={buttonRef}
         type="button"
-        className="btn-ghost"
+        className="btn-ghost h-10 w-10 p-0"
         aria-expanded={open}
         aria-haspopup="menu"
         aria-label={t("layout.menu")}

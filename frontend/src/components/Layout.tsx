@@ -59,10 +59,10 @@ export default function Layout({ children }: { children: ReactNode }) {
   }, [isAdmin]);
 
   return (
-    <div className="min-h-full flex flex-col">
+    <div className="flex min-h-full w-full min-w-0 max-w-full flex-col overflow-x-clip">
       <header className="sticky top-0 z-20 border-b border-slate-200/70 bg-white/80 backdrop-blur pt-safe dark:border-slate-800/70 dark:bg-slate-950/70">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-safe py-3">
-          <div className="flex min-w-0 items-center gap-2">
+        <div className="mx-auto flex w-full min-w-0 max-w-5xl items-center justify-between gap-2 px-safe py-3">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
             <Link
               to="/"
               className="flex min-w-0 items-center gap-2 font-semibold text-slate-900 dark:text-slate-100"
@@ -90,8 +90,11 @@ export default function Layout({ children }: { children: ReactNode }) {
               </Link>
             )}
           </div>
-          <div className="flex items-center gap-1 sm:gap-3">
-            <InstallAppButton variant="ghost" />
+          <div className="flex min-w-0 shrink-0 items-center gap-1 sm:gap-3">
+            <InstallAppButton
+              variant="ghost"
+              className="h-10 w-10 shrink-0 p-0 [&>span]:hidden sm:h-auto sm:w-auto sm:px-4 sm:py-2 sm:[&>span]:inline"
+            />
             <div className="hidden items-center gap-3 sm:flex">
               <ThemeSwitcher />
               <LanguageSwitcher />
@@ -99,7 +102,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             {isAdmin && (
               <Link
                 to="/admin/users"
-                className="btn-ghost relative"
+                className="btn-ghost relative h-10 w-10 shrink-0 p-0 sm:h-auto sm:w-auto sm:px-4 sm:py-2"
                 aria-label={
                   pendingCount > 0
                     ? t("layout.adminWithPending", { count: pendingCount })
@@ -129,7 +132,7 @@ export default function Layout({ children }: { children: ReactNode }) {
               <>
                 <Link
                   to="/me/settings"
-                  className="btn-ghost"
+                  className="btn-ghost h-10 w-10 shrink-0 p-0 sm:h-auto sm:w-auto sm:px-4 sm:py-2"
                   aria-label={t("layout.account")}
                   title={t("layout.account")}
                 >
@@ -140,7 +143,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                   {user.display_name}
                 </span>
                 <button
-                  className="btn-ghost"
+                  className="btn-ghost h-10 w-10 shrink-0 p-0 sm:h-auto sm:w-auto sm:px-4 sm:py-2"
                   onClick={() => {
                     logout();
                     navigate("/login", { replace: true });
@@ -198,7 +201,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           </div>
         </div>
       )}
-      <main className="mx-auto w-full max-w-5xl flex-1 px-safe py-6 pb-24 sm:pb-6">
+      <main className="mx-auto w-full min-w-0 max-w-5xl flex-1 px-safe py-6 pb-[calc(96px+env(safe-area-inset-bottom))] sm:pb-6">
         {children}
       </main>
       <footer className="hidden border-t border-slate-200/70 bg-white/60 pb-safe dark:border-slate-800/70 dark:bg-slate-950/60 sm:block">

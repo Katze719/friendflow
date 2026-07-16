@@ -299,7 +299,7 @@ function CalendarEntryCard({
     ? toDateKey(new Date(event.ends_at))
     : startDay;
 
-  let timeLabel = "";
+  let timeLabel: string;
   if (event.all_day) {
     timeLabel = t("trips.itinerary.allDay");
   } else if (day === startDay && day === endDay) {

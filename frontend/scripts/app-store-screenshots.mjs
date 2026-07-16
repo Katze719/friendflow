@@ -9,6 +9,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(__dirname, "..");
 const outputDir = resolve(projectRoot, "app-store-screenshots");
 const baseUrl = process.env.SCREENSHOT_BASE_URL || "http://127.0.0.1:5179";
+const layoutCheckOnly = process.argv.includes("--check-layout");
 
 const devices = [
   {
@@ -147,7 +148,7 @@ main().catch((error) => {
 });
 
 async function main() {
-  mkdirSync(outputDir, { recursive: true });
+  if (!layoutCheckOnly) mkdirSync(outputDir, { recursive: true });
   const server = process.env.SCREENSHOT_BASE_URL ? null : await startVite();
   const browser = await chromium.launch({
     executablePath: findChromium(),
@@ -156,6 +157,11 @@ async function main() {
   });
 
   try {
+    if (layoutCheckOnly) {
+      await runAccessibilityLayoutChecks(browser);
+      return;
+    }
+
     const manifest = [];
     for (const device of devices) {
       const context = await browser.newContext({
@@ -225,6 +231,148 @@ async function main() {
   }
 }
 
+async function runAccessibilityLayoutChecks(browser) {
+  const viewports = [
+    { name: "compact", width: 320, height: 700 },
+    { name: "iphone", width: 375, height: 812 },
+  ];
+  const fontScales = [100, 150, 200];
+
+  for (const viewport of viewports) {
+    for (const fontScale of fontScales) {
+      const context = await browser.newContext({
+        viewport: { width: viewport.width, height: viewport.height },
+        isMobile: true,
+        hasTouch: true,
+        locale: "de-DE",
+        colorScheme: "dark",
+      });
+      await installDemoState(context, {
+        language: "de",
+        rootFontScale: fontScale,
+        emptyDashboard: true,
+      });
+      await context.route(`${baseUrl}/api/**`, mockApiRoute);
+      await context.route(`${baseUrl}/api/groups`, (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: "[]",
+        }),
+      );
+
+      try {
+        for (const scene of scenes) {
+          const page = await context.newPage();
+          const caseName = `${viewport.name}:${fontScale}%:${scene.name}`;
+          try {
+            await page.goto(`${baseUrl}${scene.path}`, { waitUntil: "networkidle" });
+            await page.getByText(scene.ready).first().waitFor({ timeout: 10_000 });
+            await page.waitForTimeout(100);
+            await assertResponsiveLayout(page, caseName);
+          } finally {
+            await page.close();
+          }
+        }
+      } finally {
+        await context.close();
+      }
+    }
+  }
+
+  console.log(
+    `Accessibility layout checks passed for ${viewports.length * fontScales.length * scenes.length} cases.`,
+  );
+}
+
+async function assertResponsiveLayout(page, caseName) {
+  const result = await page.evaluate(() => {
+    const documentElement = document.documentElement;
+    const root = document.getElementById("root");
+    const nav = document.querySelector('nav[aria-label]');
+    const navRect = nav?.getBoundingClientRect() ?? null;
+    const navLinks = nav
+      ? Array.from(nav.querySelectorAll("a")).map((link) => {
+          const rect = link.getBoundingClientRect();
+          return {
+            label: link.getAttribute("title") || link.textContent?.trim() || "unknown",
+            left: rect.left,
+            right: rect.right,
+            width: rect.width,
+            height: rect.height,
+          };
+        })
+      : [];
+
+    return {
+      url: window.location.href,
+      bodyText: document.body.innerText.slice(0, 500),
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+      documentClientWidth: documentElement.clientWidth,
+      documentScrollWidth: documentElement.scrollWidth,
+      rootClientWidth: root?.clientWidth ?? null,
+      rootScrollWidth: root?.scrollWidth ?? null,
+      navRect: navRect
+        ? {
+            left: navRect.left,
+            right: navRect.right,
+            bottom: navRect.bottom,
+            width: navRect.width,
+            height: navRect.height,
+          }
+        : null,
+      navLinks,
+    };
+  });
+
+  const tolerance = 1;
+  const failures = [];
+  if (result.documentScrollWidth > result.documentClientWidth + tolerance) {
+    failures.push(
+      `document width ${result.documentScrollWidth}px exceeds ${result.documentClientWidth}px`,
+    );
+  }
+  if (
+    result.rootClientWidth !== null &&
+    result.rootScrollWidth !== null &&
+    result.rootScrollWidth > result.rootClientWidth + tolerance
+  ) {
+    failures.push(`root width ${result.rootScrollWidth}px exceeds ${result.rootClientWidth}px`);
+  }
+  if (!result.navRect) {
+    failures.push("mobile bottom navigation is missing");
+  } else {
+    if (result.navRect.left < -tolerance || result.navRect.right > result.viewportWidth + tolerance) {
+      failures.push(
+        `navigation bounds ${result.navRect.left}-${result.navRect.right}px leave the viewport`,
+      );
+    }
+    if (Math.abs(result.navRect.bottom - result.viewportHeight) > tolerance) {
+      failures.push(
+        `navigation bottom ${result.navRect.bottom}px is not pinned to ${result.viewportHeight}px`,
+      );
+    }
+    if (result.navLinks.length !== 5) {
+      failures.push(`expected 5 navigation links, found ${result.navLinks.length}`);
+    }
+    for (const link of result.navLinks) {
+      if (
+        link.width <= 0 ||
+        link.height <= 0 ||
+        link.left < -tolerance ||
+        link.right > result.viewportWidth + tolerance
+      ) {
+        failures.push(`navigation link ${link.label} is outside the viewport`);
+      }
+    }
+  }
+
+  if (failures.length > 0) {
+    throw new Error(`${caseName}: ${failures.join("; ")}\n${JSON.stringify(result, null, 2)}`);
+  }
+}
+
 async function startVite() {
   const viteBin = resolve(projectRoot, "node_modules/.bin/vite");
   const child = spawn(
@@ -276,27 +424,44 @@ function findChromium() {
   throw new Error("No Chromium executable found. Set CHROMIUM_PATH to a Chrome/Chromium binary.");
 }
 
-async function installDemoState(context) {
+async function installDemoState(
+  context,
+  { language = "en", rootFontScale = 100, emptyDashboard = false } = {},
+) {
   await context.addInitScript(
-    ({ user, groupSummary }) => {
+    ({ user, groupSummary, language, rootFontScale, emptyDashboard }) => {
       const namespace = "default%3A";
-      localStorage.setItem("i18nextLng", "en");
-      localStorage.setItem("friendflow.theme", "light");
+      localStorage.setItem("i18nextLng", language);
+      localStorage.setItem("friendflow.theme", emptyDashboard ? "dark" : "light");
       localStorage.setItem(`friendflow.token.${namespace}`, "app-store-demo-token");
       localStorage.setItem(`friendflow.user.${namespace}`, JSON.stringify(user));
-      localStorage.setItem(`friendflow.groups.${namespace}`, JSON.stringify([groupSummary]));
-      localStorage.setItem(`friendflow.onboarding.dismissed.${namespace}`, "1");
+      localStorage.setItem(
+        `friendflow.groups.${namespace}`,
+        JSON.stringify(emptyDashboard ? [] : [groupSummary]),
+      );
+      if (!emptyDashboard) {
+        localStorage.setItem(`friendflow.onboarding.dismissed.${namespace}`, "1");
+      }
       localStorage.setItem(
         "friendflow.homeToolShortcuts",
-        JSON.stringify([
-          { groupId: groupSummary.id, toolId: "trips", addedAt: "2026-07-01T10:00:00.000Z" },
-          { groupId: groupSummary.id, toolId: "shopping", addedAt: "2026-07-01T10:00:00.000Z" },
-          { groupId: groupSummary.id, toolId: "splitwise", addedAt: "2026-07-01T10:00:00.000Z" },
-        ]),
+        JSON.stringify(
+          emptyDashboard
+            ? []
+            : [
+                { groupId: groupSummary.id, toolId: "trips", addedAt: "2026-07-01T10:00:00.000Z" },
+                { groupId: groupSummary.id, toolId: "shopping", addedAt: "2026-07-01T10:00:00.000Z" },
+                { groupId: groupSummary.id, toolId: "splitwise", addedAt: "2026-07-01T10:00:00.000Z" },
+              ],
+        ),
       );
       localStorage.setItem("friendflow.banner.tripList", "1");
+      const applyRootFontScale = () => {
+        document.documentElement.style.fontSize = `${rootFontScale}%`;
+      };
+      if (document.documentElement) applyRootFontScale();
+      else document.addEventListener("DOMContentLoaded", applyRootFontScale, { once: true });
     },
-    { user, groupSummary },
+    { user, groupSummary, language, rootFontScale, emptyDashboard },
   );
 }
 
