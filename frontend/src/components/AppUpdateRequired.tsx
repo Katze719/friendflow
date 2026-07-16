@@ -12,7 +12,14 @@ export default function AppUpdateRequired() {
   const compatibility = useAppCompatibility();
   const minimumVersion = compatibility.info?.minimum_supported_app_version;
   const latestVersion = compatibility.info?.latest_app_version;
-  const message = compatibility.info?.message;
+  const isNativeApp = compatibility.platform !== "web";
+  const message =
+    compatibility.info?.message ??
+    (compatibility.platform === "ios"
+      ? t("appUpdate.available.pendingIos")
+      : compatibility.platform === "android"
+        ? t("appUpdate.available.pendingAndroid")
+        : t("appUpdate.required.body"));
 
   return (
     <div className="flex min-h-full flex-col bg-slate-50 px-safe py-[max(2rem,env(safe-area-inset-top))] dark:bg-slate-950">
@@ -38,7 +45,7 @@ export default function AppUpdateRequired() {
               {t("appUpdate.required.title")}
             </h1>
             <p className="text-sm text-slate-600 dark:text-slate-300">
-              {message || t("appUpdate.required.body")}
+              {message}
             </p>
           </div>
 
@@ -66,9 +73,11 @@ export default function AppUpdateRequired() {
                 rel="noreferrer"
               >
                 <RefreshCw className="h-4 w-4" />
-                {t("appUpdate.updateAction")}
+                {compatibility.platform === "ios"
+                  ? t("appUpdate.checkIosAction")
+                  : t("appUpdate.checkAndroidAction")}
               </a>
-            ) : (
+            ) : !isNativeApp ? (
               <button
                 className="btn-primary w-full"
                 type="button"
@@ -77,7 +86,7 @@ export default function AppUpdateRequired() {
                 <RefreshCw className="h-4 w-4" />
                 {t("appUpdate.reloadAction")}
               </button>
-            )}
+            ) : null}
             <div className="flex flex-wrap justify-center gap-2">
               <InstanceSwitcher />
               <button

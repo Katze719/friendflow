@@ -119,7 +119,7 @@ deployments need:
 | `APP_LATEST_VERSION` | build version  | Optional override for the newest published app version shown as a non-blocking update hint. When unset, `/api/app/version` uses the backend build's git-derived version. |
 | `APP_IOS_STORE_URL`  | *(empty)*      | Optional iOS App Store URL used by update prompts.                                                                                                                      |
 | `APP_ANDROID_STORE_URL` | *(empty)*   | Optional Google Play URL used by update prompts.                                                                                                                        |
-| `APP_UPDATE_MESSAGE` | *(empty)*      | Optional custom message for the update-required screen.                                                                                                                 |
+| `APP_UPDATE_MESSAGE` | *(empty)*      | Optional custom message shown in available- and required-update notices; useful while a mobile release is still awaiting store approval.                               |
 | `SMTP_HOST`          | *(empty)*      | Hostname of the SMTP relay for transactional emails. Leaving it empty disables password recovery; the "Forgot password?" link won't appear on the login screen.         |
 | `SMTP_PORT`          | `587` / `465` / `25` | SMTP port. Defaults pick sensibly based on `SMTP_ENCRYPTION`.                                                                                                     |
 | `SMTP_ENCRYPTION`    | `starttls`     | `starttls` (upgrade on port 587), `tls` (implicit TLS, usually 465) or `none` (plaintext, dev only).                                                                    |

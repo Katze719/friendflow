@@ -76,7 +76,8 @@ const en = {
     currentVersion: "Current app version",
     requiredVersion: "Required version",
     unknownVersion: "Unknown",
-    updateAction: "Update app",
+    checkIosAction: "Check the App Store",
+    checkAndroidAction: "Check the Play Store",
     reloadAction: "Reload app",
     required: {
       title: "Update required",
@@ -85,6 +86,10 @@ const en = {
     },
     available: {
       body: "A newer app version is available.",
+      pendingIos:
+        "A new app version is on its way. Check the App Store — if it is not showing up yet, Apple is probably still reviewing it. This can take a little while.",
+      pendingAndroid:
+        "A new app version is on its way. Check the Play Store — if it is not showing up yet, Google is probably still reviewing it. This can take a little while.",
     },
   },
   landing: {

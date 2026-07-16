@@ -78,7 +78,8 @@ const de: Translations = {
     currentVersion: "Aktuelle App-Version",
     requiredVersion: "Benötigte Version",
     unknownVersion: "Unbekannt",
-    updateAction: "App aktualisieren",
+    checkIosAction: "Im App Store nachsehen",
+    checkAndroidAction: "Im Play Store nachsehen",
     reloadAction: "App neu laden",
     required: {
       title: "Update erforderlich",
@@ -87,6 +88,10 @@ const de: Translations = {
     },
     available: {
       body: "Eine neuere App-Version ist verfügbar.",
+      pendingIos:
+        "Eine neue App-Version ist unterwegs. Schau gern im App Store nach – falls sie dort noch nicht angezeigt wird, prüft Apple sie wahrscheinlich noch. Das kann etwas dauern.",
+      pendingAndroid:
+        "Eine neue App-Version ist unterwegs. Schau gern im Play Store nach – falls sie dort noch nicht angezeigt wird, prüft Google sie wahrscheinlich noch. Das kann etwas dauern.",
     },
   },
   landing: {

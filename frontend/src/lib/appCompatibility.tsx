@@ -23,10 +23,13 @@ type CompatibilityStatus =
   | "update_required"
   | "unknown";
 
+type ClientPlatform = "ios" | "android" | "web";
+
 interface AppCompatibilityState {
   status: CompatibilityStatus;
   info: AppVersionInfo | null;
   clientVersion: string;
+  platform: ClientPlatform;
   updateUrl: string | null;
   refresh: () => Promise<void>;
 }
@@ -35,7 +38,9 @@ const AppCompatibilityContext = createContext<AppCompatibilityState | null>(null
 
 export function AppCompatibilityProvider({ children }: { children: ReactNode }) {
   const instance = useActiveInstance();
-  const [state, setState] = useState<Omit<AppCompatibilityState, "refresh" | "updateUrl">>({
+  const [state, setState] = useState<
+    Omit<AppCompatibilityState, "refresh" | "updateUrl" | "platform">
+  >({
     status: "checking",
     info: null,
     clientVersion: __APP_VERSION__,
@@ -106,6 +111,7 @@ export function AppCompatibilityProvider({ children }: { children: ReactNode }) 
   const value = useMemo<AppCompatibilityState>(
     () => ({
       ...state,
+      platform: getClientPlatform(),
       updateUrl: getStoreUrl(state.info),
       refresh: () => refresh(),
     }),
@@ -219,7 +225,7 @@ function getStoreUrl(info: AppVersionInfo | null): string | null {
   return null;
 }
 
-function getClientPlatform(): "ios" | "android" | "web" {
+function getClientPlatform(): ClientPlatform {
   const maybeCapacitor = (globalThis as typeof globalThis & {
     Capacitor?: { getPlatform?: () => string };
   }).Capacitor;

@@ -22,6 +22,16 @@ export default function Layout({ children }: { children: ReactNode }) {
   const isAdmin = !!user?.is_admin;
   const [pendingCount, setPendingCount] = useState(0);
   const [updateBannerDismissed, setUpdateBannerDismissed] = useState(false);
+  const isNativeApp = compatibility.platform !== "web";
+  const availableUpdateMessage =
+    compatibility.info?.message ??
+    (compatibility.platform === "ios"
+      ? t("appUpdate.available.pendingIos")
+      : compatibility.platform === "android"
+        ? t("appUpdate.available.pendingAndroid")
+        : t("appUpdate.available.body", {
+            version: compatibility.info?.latest_app_version ?? "",
+          }));
   // Hide the shortcut on the dashboard itself - otherwise the primary
   // CTA would just take you to the page you're already on.
   const onDashboard = location.pathname === "/";
@@ -163,11 +173,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       {compatibility.status === "update_available" && !updateBannerDismissed && (
         <div className="border-b border-amber-200 bg-amber-50 px-safe py-2 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-100">
           <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2">
-            <span>
-              {t("appUpdate.available.body", {
-                version: compatibility.info?.latest_app_version ?? "",
-              })}
-            </span>
+            <span>{availableUpdateMessage}</span>
             <div className="flex items-center gap-1">
               {compatibility.updateUrl ? (
                 <a
@@ -177,9 +183,11 @@ export default function Layout({ children }: { children: ReactNode }) {
                   rel="noreferrer"
                 >
                   <RefreshCw className="h-3.5 w-3.5" />
-                  {t("appUpdate.updateAction")}
+                  {compatibility.platform === "ios"
+                    ? t("appUpdate.checkIosAction")
+                    : t("appUpdate.checkAndroidAction")}
                 </a>
-              ) : (
+              ) : !isNativeApp ? (
                 <button
                   className="btn-ghost h-8 px-2 text-xs"
                   type="button"
@@ -188,7 +196,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                   <RefreshCw className="h-3.5 w-3.5" />
                   {t("appUpdate.reloadAction")}
                 </button>
-              )}
+              ) : null}
               <button
                 className="btn-ghost h-8 px-2 text-xs"
                 type="button"
