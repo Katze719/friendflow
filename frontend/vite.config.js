@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { version } from "./package.json";
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 var repoRoot = fileURLToPath(new URL("..", import.meta.url));
 function resolveAppVersion() {
@@ -11,7 +11,12 @@ function resolveAppVersion() {
         return envVersion;
     }
     try {
-        return execSync("git describe --tags --always --dirty", {
+        var gitArgs = ["describe", "--tags", "--always"];
+        var isCiBuild = process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true";
+        if (!isCiBuild) {
+            gitArgs.push("--dirty");
+        }
+        return execFileSync("git", gitArgs, {
             cwd: repoRoot,
             encoding: "utf8",
             stdio: ["ignore", "pipe", "ignore"],
