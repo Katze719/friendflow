@@ -131,3 +131,19 @@
            dark:focus:border-brand-400 dark:focus:ring-brand-400/30;
   }
 }
+
+/* iOS zooms the page when a text-editable control smaller than 16px receives
+   focus. Keep mobile controls at that threshold while preserving the existing
+   compact typography from Tailwind's `sm` breakpoint upwards. */
+@media (max-width: 639px) {
+  input:not([type="button"]):not([type="checkbox"]):not([type="color"]):not(
+      [type="file"]
+    ):not([type="hidden"]):not([type="image"]):not([type="radio"]):not(
+      [type="range"]
+    ):not([type="reset"]):not([type="submit"]),
+  select,
+  textarea {
+    /* Must win over component and utility classes such as `.input`/`text-sm`. */
+    font-size: max(16px, 1rem) !important;
+  }
+}

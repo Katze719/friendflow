@@ -289,6 +289,36 @@ async function assertResponsiveLayout(page, caseName) {
   const result = await page.evaluate(() => {
     const documentElement = document.documentElement;
     const root = document.getElementById("root");
+    const minimumEditableFontSize = Math.max(
+      16,
+      Number.parseFloat(getComputedStyle(documentElement).fontSize),
+    );
+    const nonEditableInputTypes = new Set([
+      "button",
+      "checkbox",
+      "color",
+      "file",
+      "hidden",
+      "image",
+      "radio",
+      "range",
+      "reset",
+      "submit",
+    ]);
+    const undersizedEditableControls = Array.from(
+      document.querySelectorAll("input, select, textarea"),
+    )
+      .filter(
+        (control) =>
+          control.tagName !== "INPUT" || !nonEditableInputTypes.has(control.type.toLowerCase()),
+      )
+      .map((control) => ({
+        element: control.tagName.toLowerCase(),
+        type: control.getAttribute("type") || null,
+        name: control.getAttribute("name") || control.getAttribute("id") || null,
+        fontSize: Number.parseFloat(getComputedStyle(control).fontSize),
+      }))
+      .filter((control) => control.fontSize < minimumEditableFontSize);
     const nav = document.querySelector('nav[aria-label]');
     const navRect = nav?.getBoundingClientRect() ?? null;
     const navLinks = nav
@@ -313,6 +343,8 @@ async function assertResponsiveLayout(page, caseName) {
       documentScrollWidth: documentElement.scrollWidth,
       rootClientWidth: root?.clientWidth ?? null,
       rootScrollWidth: root?.scrollWidth ?? null,
+      minimumEditableFontSize,
+      undersizedEditableControls,
       navRect: navRect
         ? {
             left: navRect.left,
@@ -339,6 +371,11 @@ async function assertResponsiveLayout(page, caseName) {
     result.rootScrollWidth > result.rootClientWidth + tolerance
   ) {
     failures.push(`root width ${result.rootScrollWidth}px exceeds ${result.rootClientWidth}px`);
+  }
+  if (result.undersizedEditableControls.length > 0) {
+    failures.push(
+      `editable controls below ${result.minimumEditableFontSize}px: ${JSON.stringify(result.undersizedEditableControls)}`,
+    );
   }
   if (!result.navRect) {
     failures.push("mobile bottom navigation is missing");
