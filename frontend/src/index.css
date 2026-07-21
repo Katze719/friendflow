@@ -28,7 +28,16 @@
   }
   body {
     @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100;
+    accent-color: #4f46e5;
     -webkit-tap-highlight-color: transparent;
+  }
+  ::selection {
+    background-color: #c7d2fe;
+    color: #1e1b4b;
+  }
+  .dark ::selection {
+    background-color: #4338ca;
+    color: #eef2ff;
   }
   /* Use the dynamic viewport height where available so iOS Safari
      doesn't clip content when the URL bar shows/hides. */
