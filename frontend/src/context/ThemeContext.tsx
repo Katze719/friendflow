@@ -10,8 +10,29 @@ import {
 
 export type ThemePreference = "light" | "dark" | "system";
 export type ResolvedTheme = "light" | "dark";
+export type AccentPreference =
+  | "indigo"
+  | "ocean"
+  | "emerald"
+  | "rose"
+  | "lavender"
+  | "sky"
+  | "peach"
+  | "pink";
 
 const STORAGE_KEY = "friendflow.theme";
+const ACCENT_STORAGE_KEY = "friendflow.accent";
+const HEADER_ICON_STORAGE_KEY = "friendflow.headerIcon";
+const ACCENT_THEME_COLORS: Record<AccentPreference, string> = {
+  indigo: "#4f46e5",
+  ocean: "#0369a1",
+  emerald: "#047857",
+  rose: "#be123c",
+  lavender: "#7e22ce",
+  sky: "#1d4ed8",
+  peach: "#c2410c",
+  pink: "#b5179e",
+};
 
 interface ThemeContextValue {
   /** User preference (what they selected). */
@@ -19,6 +40,39 @@ interface ThemeContextValue {
   /** Actually applied theme after resolving "system". */
   resolved: ResolvedTheme;
   setPreference: (pref: ThemePreference) => void;
+  accent: AccentPreference;
+  setAccent: (accent: AccentPreference) => void;
+  showHeaderIcon: boolean;
+  setShowHeaderIcon: (show: boolean) => void;
+}
+
+function readStoredAccent(): AccentPreference {
+  try {
+    const value = localStorage.getItem(ACCENT_STORAGE_KEY);
+    if (
+      value === "indigo" ||
+      value === "ocean" ||
+      value === "emerald" ||
+      value === "rose" ||
+      value === "lavender" ||
+      value === "sky" ||
+      value === "peach" ||
+      value === "pink"
+    ) {
+      return value;
+    }
+  } catch {
+    /* ignore */
+  }
+  return "indigo";
+}
+
+function readStoredHeaderIcon(): boolean {
+  try {
+    return localStorage.getItem(HEADER_ICON_STORAGE_KEY) !== "hidden";
+  } catch {
+    return true;
+  }
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -48,6 +102,13 @@ function applyThemeClass(resolved: ResolvedTheme) {
   root.style.colorScheme = resolved;
 }
 
+function applyAccent(accent: AccentPreference) {
+  document.documentElement.dataset.accent = accent;
+  document
+    .querySelector('meta[name="theme-color"]')
+    ?.setAttribute("content", ACCENT_THEME_COLORS[accent]);
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [preference, setPreferenceState] = useState<ThemePreference>(() =>
     readStoredPreference(),
@@ -58,6 +119,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         ? "dark"
         : "light"
       : preference,
+  );
+  const [accent, setAccentState] = useState<AccentPreference>(() => readStoredAccent());
+  const [showHeaderIcon, setShowHeaderIconState] = useState<boolean>(() =>
+    readStoredHeaderIcon(),
   );
 
   useEffect(() => {
@@ -70,6 +135,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setResolved(next);
     applyThemeClass(next);
   }, [preference]);
+
+  useEffect(() => {
+    applyAccent(accent);
+  }, [accent]);
 
   useEffect(() => {
     if (preference !== "system") return;
@@ -92,9 +161,35 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const setAccent = useCallback((nextAccent: AccentPreference) => {
+    setAccentState(nextAccent);
+    try {
+      localStorage.setItem(ACCENT_STORAGE_KEY, nextAccent);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const setShowHeaderIcon = useCallback((show: boolean) => {
+    setShowHeaderIconState(show);
+    try {
+      localStorage.setItem(HEADER_ICON_STORAGE_KEY, show ? "visible" : "hidden");
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   const value = useMemo(
-    () => ({ preference, resolved, setPreference }),
-    [preference, resolved, setPreference],
+    () => ({
+      preference,
+      resolved,
+      setPreference,
+      accent,
+      setAccent,
+      showHeaderIcon,
+      setShowHeaderIcon,
+    }),
+    [preference, resolved, setPreference, accent, setAccent, showHeaderIcon, setShowHeaderIcon],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

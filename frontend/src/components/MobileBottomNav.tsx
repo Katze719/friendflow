@@ -39,7 +39,7 @@ export default function MobileBottomNav() {
     },
     {
       to: "/me/settings",
-      label: t("mobileNav.account"),
+      label: t("mobileNav.settings"),
       icon: Settings,
       active: location.pathname === "/me/settings",
     },
@@ -47,6 +47,7 @@ export default function MobileBottomNav() {
 
   return (
     <nav
+      data-testid="mobile-bottom-nav"
       aria-label={t("mobileNav.aria")}
       className="fixed bottom-0 left-0 right-auto z-30 w-screen max-w-full overflow-hidden border-t border-slate-200/80 bg-white/95 px-safe pb-safe shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur sm:hidden dark:border-slate-800/80 dark:bg-slate-950/95"
     >

@@ -28,13 +28,31 @@ const de: Translations = {
   },
   theme: {
     aria: "Farbschema",
+    mode: "Darstellung",
+    accent: "Akzentfarbe",
+    accentAria: "Akzentfarbe",
     light: "Hell",
     dark: "Dunkel",
     system: "System",
+    accents: {
+      indigo: "Indigo",
+      ocean: "Ocean",
+      emerald: "Smaragd",
+      rose: "Rubin",
+      lavender: "Lavendel",
+      sky: "Himmelblau",
+      peach: "Pfirsich",
+      pink: "Rosa",
+    },
+    headerIcon: {
+      title: "Icon in der Kopfzeile",
+      subtitle: "Zeigt das friendflow-Icon neben dem Namen in der App-Kopfzeile.",
+    },
   },
   layout: {
     signOut: "Abmelden",
     account: "Konto",
+    settings: "Einstellungen",
     admin: "Admin",
     adminWithPending: "Admin ({{count}} offen)",
     menu: "Menü",
@@ -52,6 +70,7 @@ const de: Translations = {
     shopping: "Einkauf",
     tasks: "Tasks",
     account: "Konto",
+    settings: "Einstellungen",
   },
   notFound: {
     title: "Nicht gefunden",
@@ -422,8 +441,8 @@ const de: Translations = {
     loginLink: "Zur Anmeldung",
   },
   account: {
-    title: "Kontoeinstellungen",
-    subtitle: "Verwalte Profil, Passwort und den Status deines Kontos.",
+    title: "Einstellungen & Konto",
+    subtitle: "Verwalte Darstellung, Profil, Sicherheit und App-Zugriff.",
     profile: {
       title: "Profil",
       subtitle: "Ändere den Namen, den andere Leute in deinen Gruppen sehen.",
@@ -432,6 +451,14 @@ const de: Translations = {
       errors: {
         displayNameShort: "Der Anzeigename muss mindestens 2 Zeichen haben.",
       },
+    },
+    preferences: {
+      title: "Darstellung & Sprache",
+      subtitle: "Passe an, wie friendflow auf diesem Gerät aussieht und welche Sprache verwendet wird.",
+    },
+    access: {
+      title: "App & Zugriff",
+      subtitle: "Verwalte den App-Zugriff und deine aktuelle Sitzung.",
     },
     password: {
       title: "Passwort",

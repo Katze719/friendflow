@@ -4,8 +4,8 @@ import { useTranslation } from "react-i18next";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { adminApi } from "../api/admin";
 import { useAuth } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
 import { useAppCompatibility } from "../lib/appCompatibility";
-import HeaderMenu from "./HeaderMenu";
 import InstallAppButton from "./InstallAppButton";
 import LanguageSwitcher from "./LanguageSwitcher";
 import MobileBottomNav from "./MobileBottomNav";
@@ -15,6 +15,7 @@ const PENDING_POLL_MS = 60_000;
 
 export default function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
+  const { showHeaderIcon } = useTheme();
   const compatibility = useAppCompatibility();
   const navigate = useNavigate();
   const location = useLocation();
@@ -77,13 +78,16 @@ export default function Layout({ children }: { children: ReactNode }) {
               to="/"
               className="flex min-w-0 items-center gap-2 font-semibold text-slate-900 dark:text-slate-100"
             >
-              <img
-                src="/favicon-192.png"
-                alt=""
-                width={32}
-                height={32}
-                className="h-8 w-8 shrink-0 rounded-lg"
-              />
+              {showHeaderIcon ? (
+                <img
+                  data-testid="header-icon"
+                  src="/favicon-192.png"
+                  alt=""
+                  width={32}
+                  height={32}
+                  className="h-8 w-8 shrink-0 rounded-lg"
+                />
+              ) : null}
               <span className="truncate">friendflow</span>
             </Link>
             {user && !onDashboard && (
@@ -100,7 +104,10 @@ export default function Layout({ children }: { children: ReactNode }) {
               </Link>
             )}
           </div>
-          <div className="flex min-w-0 shrink-0 items-center gap-1 sm:gap-3">
+          <div
+            data-testid="header-actions"
+            className="hidden min-w-0 shrink-0 items-center gap-3 sm:flex"
+          >
             <InstallAppButton
               variant="ghost"
               className="h-10 w-10 shrink-0 p-0 [&>span]:hidden sm:h-auto sm:w-auto sm:px-4 sm:py-2 sm:[&>span]:inline"
@@ -166,7 +173,6 @@ export default function Layout({ children }: { children: ReactNode }) {
                 </button>
               </>
             )}
-            <HeaderMenu />
           </div>
         </div>
       </header>

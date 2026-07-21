@@ -3,8 +3,11 @@ import LanguageDetector from "i18next-browser-languagedetector";
 import { initReactI18next } from "react-i18next";
 import de from "./de";
 import en from "./en";
+import es from "./es";
+import fr from "./fr";
+import it from "./it";
 
-export const SUPPORTED_LANGUAGES = ["en", "de"] as const;
+export const SUPPORTED_LANGUAGES = ["de", "en", "fr", "es", "it"] as const;
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number];
 
 void i18n
@@ -14,6 +17,9 @@ void i18n
     resources: {
       en: { translation: en },
       de: { translation: de },
+      fr: { translation: fr },
+      es: { translation: es },
+      it: { translation: it },
     },
     fallbackLng: "en",
     supportedLngs: SUPPORTED_LANGUAGES as unknown as string[],

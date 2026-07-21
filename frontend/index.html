@@ -42,6 +42,21 @@
       (function () {
         try {
           var pref = localStorage.getItem("friendflow.theme") || "system";
+          var accent = localStorage.getItem("friendflow.accent") || "indigo";
+          var accents = {
+            indigo: "#4f46e5",
+            ocean: "#0369a1",
+            emerald: "#047857",
+            rose: "#be123c",
+            lavender: "#7e22ce",
+            sky: "#1d4ed8",
+            peach: "#c2410c",
+            pink: "#b5179e",
+          };
+          if (!accents[accent]) accent = "indigo";
+          document.documentElement.dataset.accent = accent;
+          var themeMeta = document.querySelector('meta[name="theme-color"]');
+          if (themeMeta) themeMeta.setAttribute("content", accents[accent]);
           var dark =
             pref === "dark" ||
             (pref === "system" &&

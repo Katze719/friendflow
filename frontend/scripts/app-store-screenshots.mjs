@@ -274,6 +274,17 @@ async function runAccessibilityLayoutChecks(browser) {
             await page.close();
           }
         }
+        const settingsPage = await context.newPage();
+        const settingsCaseName = `${viewport.name}:${fontScale}%:settings`;
+        try {
+          await settingsPage.goto(`${baseUrl}/me/settings`, { waitUntil: "networkidle" });
+          await settingsPage.locator('[data-testid="settings-hub"]').waitFor({ timeout: 10_000 });
+          await assertResponsiveLayout(settingsPage, settingsCaseName);
+          await assertSettingsHub(settingsPage, settingsCaseName);
+          await assertPreferences(settingsPage, settingsCaseName);
+        } finally {
+          await settingsPage.close();
+        }
       } finally {
         await context.close();
       }
@@ -281,8 +292,67 @@ async function runAccessibilityLayoutChecks(browser) {
   }
 
   console.log(
-    `Accessibility layout checks passed for ${viewports.length * fontScales.length * scenes.length} cases.`,
+    `Accessibility layout checks passed for ${viewports.length * fontScales.length * (scenes.length + 1)} cases.`,
   );
+}
+
+async function assertSettingsHub(page, caseName) {
+  const result = await page.locator('[data-testid="settings-hub"]').evaluate((hub) => ({
+    accentAndLanguageOptions: hub.querySelectorAll('[role="radio"]').length,
+    themeOptions: hub.querySelectorAll('button[aria-pressed]').length,
+    headerIconSwitches: hub.querySelectorAll('[role="switch"]').length,
+    signOutButtons: Array.from(hub.querySelectorAll("button")).filter((button) =>
+      /abmelden|sign out/i.test(button.textContent ?? ""),
+    ).length,
+  }));
+  const failures = [];
+  if (result.accentAndLanguageOptions !== 13) {
+    failures.push(`expected 13 accent/language options, found ${result.accentAndLanguageOptions}`);
+  }
+  if (result.themeOptions !== 3) {
+    failures.push(`expected 3 display mode options, found ${result.themeOptions}`);
+  }
+  if (result.headerIconSwitches !== 1) failures.push("header icon switch is missing");
+  if (result.signOutButtons !== 1) failures.push("sign-out action is missing");
+  if (failures.length > 0) throw new Error(`${caseName}: ${failures.join("; ")}`);
+}
+
+async function assertPreferences(page, caseName) {
+  const hub = page.locator('[data-testid="settings-hub"]');
+  const radioOptions = hub.locator('[role="radio"]');
+  await radioOptions.nth(7).click();
+  await page.waitForTimeout(200);
+  const accentResult = await page.evaluate(() => ({
+    attribute: document.documentElement.dataset.accent,
+    stored: localStorage.getItem("friendflow.accent"),
+    primary: getComputedStyle(document.querySelector(".btn-primary")).backgroundColor,
+  }));
+  if (
+    accentResult.attribute !== "pink" ||
+    accentResult.stored !== "pink" ||
+    accentResult.primary !== "rgb(181, 23, 158)"
+  ) {
+    throw new Error(`${caseName}: pink accent was not applied: ${JSON.stringify(accentResult)}`);
+  }
+
+  const iconToggle = hub.locator('[data-testid="header-icon-toggle"]');
+  await iconToggle.click();
+  const iconResult = await page.evaluate(() => ({
+    stored: localStorage.getItem("friendflow.headerIcon"),
+    visible: document.querySelector('[data-testid="header-icon"]') !== null,
+  }));
+  if (iconResult.stored !== "hidden" || iconResult.visible) {
+    throw new Error(`${caseName}: header icon was not hidden: ${JSON.stringify(iconResult)}`);
+  }
+
+  await radioOptions.nth(10).click();
+  const languageResult = await page.evaluate(() => ({
+    htmlLang: document.documentElement.lang,
+    stored: localStorage.getItem("friendflow.lang"),
+  }));
+  if (languageResult.htmlLang !== "fr" || languageResult.stored !== "fr") {
+    throw new Error(`${caseName}: French language was not persisted: ${JSON.stringify(languageResult)}`);
+  }
 }
 
 async function assertResponsiveLayout(page, caseName) {
@@ -319,7 +389,8 @@ async function assertResponsiveLayout(page, caseName) {
         fontSize: Number.parseFloat(getComputedStyle(control).fontSize),
       }))
       .filter((control) => control.fontSize < minimumEditableFontSize);
-    const nav = document.querySelector('nav[aria-label]');
+    const nav = document.querySelector('[data-testid="mobile-bottom-nav"]');
+    const headerActions = document.querySelector('[data-testid="header-actions"]');
     const navRect = nav?.getBoundingClientRect() ?? null;
     const navLinks = nav
       ? Array.from(nav.querySelectorAll("a")).map((link) => {
@@ -355,6 +426,8 @@ async function assertResponsiveLayout(page, caseName) {
           }
         : null,
       navLinks,
+      headerActionsVisible:
+        headerActions !== null && headerActions.getClientRects().length > 0,
     };
   });
 
@@ -376,6 +449,9 @@ async function assertResponsiveLayout(page, caseName) {
     failures.push(
       `editable controls below ${result.minimumEditableFontSize}px: ${JSON.stringify(result.undersizedEditableControls)}`,
     );
+  }
+  if (result.headerActionsVisible) {
+    failures.push("mobile header actions are visible");
   }
   if (!result.navRect) {
     failures.push("mobile bottom navigation is missing");

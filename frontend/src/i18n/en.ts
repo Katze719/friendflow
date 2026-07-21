@@ -26,13 +26,31 @@ const en = {
   },
   theme: {
     aria: "Color theme",
+    mode: "Display mode",
+    accent: "Accent color",
+    accentAria: "Accent color",
     light: "Light",
     dark: "Dark",
     system: "System",
+    accents: {
+      indigo: "Indigo",
+      ocean: "Ocean",
+      emerald: "Emerald",
+      rose: "Ruby",
+      lavender: "Lavender",
+      sky: "Sky blue",
+      peach: "Peach",
+      pink: "Pink",
+    },
+    headerIcon: {
+      title: "Header icon",
+      subtitle: "Show the friendflow icon next to the name in the app header.",
+    },
   },
   layout: {
     signOut: "Sign out",
     account: "Account",
+    settings: "Settings",
     admin: "Admin",
     adminWithPending: "Admin ({{count}} pending)",
     menu: "Menu",
@@ -50,6 +68,7 @@ const en = {
     shopping: "Shop",
     tasks: "Tasks",
     account: "Account",
+    settings: "Settings",
   },
   notFound: {
     title: "Not found",
@@ -418,8 +437,8 @@ const en = {
     loginLink: "Back to sign in",
   },
   account: {
-    title: "Account settings",
-    subtitle: "Manage your profile, password and account lifecycle.",
+    title: "Settings & account",
+    subtitle: "Manage your preferences, profile, security and app access.",
     profile: {
       title: "Profile",
       subtitle: "Update the name other people in your groups see.",
@@ -428,6 +447,14 @@ const en = {
       errors: {
         displayNameShort: "Display name must be at least 2 characters.",
       },
+    },
+    preferences: {
+      title: "Appearance & language",
+      subtitle: "Personalize how friendflow looks and which language it uses on this device.",
+    },
+    access: {
+      title: "App & access",
+      subtitle: "Manage app access and your current session.",
     },
     password: {
       title: "Password",
