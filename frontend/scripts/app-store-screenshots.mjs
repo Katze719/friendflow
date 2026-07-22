@@ -47,14 +47,39 @@ const scenes = [
     ready: /Gruppen|Groups/i,
   },
   {
-    name: "02-trip-planner",
+    name: "02-group-overview",
+    path: "/groups/g1",
+    ready: /Summer House/i,
+  },
+  {
+    name: "03-trip-planner",
     path: "/groups/g1/trips/trip1",
     ready: /Summer in Porto/i,
   },
   {
-    name: "03-shopping-list",
+    name: "04-shared-expenses",
+    path: "/groups/g1/splitwise",
+    ready: /Your balance|Dein Saldo/i,
+  },
+  {
+    name: "05-group-calendar",
+    path: "/groups/g1/calendar",
+    ready: /Upcoming events for this group|Anstehende Termine der Gruppe/i,
+  },
+  {
+    name: "06-shopping-list",
     path: "/groups/g1/shopping/list1",
     ready: /House Groceries/i,
+  },
+  {
+    name: "07-personalization",
+    path: "/me/settings",
+    ready: /Appearance & language|Darstellung & Sprache/i,
+    prepare: async (page) => {
+      await page
+        .getByText(/Appearance & language|Darstellung & Sprache/i, { exact: true })
+        .scrollIntoViewIfNeeded();
+    },
   },
 ];
 
@@ -172,7 +197,7 @@ async function main() {
         locale: "en-US",
         colorScheme: "light",
       });
-      await installDemoState(context);
+      await installDemoState(context, { language: "en" });
       await context.route(`${baseUrl}/api/**`, mockApiRoute);
 
       for (const scene of scenes) {
@@ -202,6 +227,7 @@ async function main() {
           );
           throw error;
         }
+        if (scene.prepare) await scene.prepare(page);
         await page.waitForTimeout(350);
 
         const file = join(outputDir, `${device.name}-${scene.name}.png`);
@@ -609,6 +635,14 @@ function getMock(path) {
       registration_mode: "open",
       password_reset_enabled: true,
       instance_name: "friendflow",
+    },
+    "/api/app/version": {
+      backend_version: "0.5.0",
+      minimum_supported_app_version: null,
+      latest_app_version: "0.5.0",
+      ios_store_url: null,
+      android_store_url: null,
+      message: null,
     },
     "/api/auth/me": user,
     "/api/admin/users": [],
