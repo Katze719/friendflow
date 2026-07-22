@@ -17,6 +17,7 @@
     "mobile:build": "npm run build && npm run cap:sync"
   },
   "dependencies": {
+    "@capacitor/app": "^7.1.2",
     "@capacitor/core": "^7.4.3",
     "clsx": "^2.1.1",
     "i18next": "^26.0.5",

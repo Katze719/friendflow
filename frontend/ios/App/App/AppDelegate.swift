@@ -1,6 +1,17 @@
 import UIKit
 import Capacitor
 
+class FriendFlowBridgeViewController: CAPBridgeViewController {
+    override func capacitorDidLoad() {
+        super.capacitorDidLoad()
+
+        // Capacitor disables WKWebView's native rubber-band scrolling by
+        // default. Restore the standard iOS scrolling and history gestures.
+        webView?.scrollView.bounces = true
+        webView?.allowsBackForwardNavigationGestures = true
+    }
+}
+
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
