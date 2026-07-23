@@ -50,6 +50,9 @@ services:
       # frontend and is baked into the reset links sent out by mail -
       # leave it blank to fall back to the first CORS_ORIGIN entry.
       APP_BASE_URL: ${APP_BASE_URL:-}
+      # Official mobile app association. Leave empty on self-hosted domains.
+      APP_LINK_IOS_TEAM_ID: ${APP_LINK_IOS_TEAM_ID:-}
+      APP_LINK_ANDROID_SHA256_CERT_FINGERPRINTS: ${APP_LINK_ANDROID_SHA256_CERT_FINGERPRINTS:-}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-}
       SMTP_ENCRYPTION: ${SMTP_ENCRYPTION:-}

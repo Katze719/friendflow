@@ -22,6 +22,7 @@ import GroupToolSwitcher from "../components/GroupToolSwitcher";
 import PageHeader from "../components/PageHeader";
 import { useAuth } from "../context/AuthContext";
 import { formatDate } from "../lib/format";
+import { buildPublicAppUrl } from "../lib/instances";
 import { toolPath, tools } from "../tools";
 import { useFavoriteTools } from "../tools/useFavoriteTools";
 import { useConfirm, useToast } from "../ui/UIProvider";
@@ -51,7 +52,7 @@ export default function GroupHome() {
 
   const inviteUrl = useMemo(() => {
     if (!group?.invite_code) return "";
-    return `${window.location.origin}/i/${group.invite_code}`;
+    return buildPublicAppUrl(`/i/${group.invite_code}`);
   }, [group]);
 
   const reload = useCallback(() => {

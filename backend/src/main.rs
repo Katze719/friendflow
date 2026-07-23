@@ -20,6 +20,7 @@ use tower_http::{
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 mod admin;
+mod app_links;
 mod app_version;
 mod auth;
 mod calendar;
@@ -70,6 +71,7 @@ async fn serve(cfg: config::Config) -> anyhow::Result<()> {
 
     let app = Router::new()
         .route("/api/health", get(health))
+        .merge(app_links::routes())
         .nest("/api/app", app_version::routes())
         .route(
             "/api/auth/google-calendar/callback",

@@ -22,6 +22,19 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Verified Android App Links for every route on the official
+                 friendflow instance. Without a matching assetlinks.json,
+                 Android safely falls back to the browser. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="friendflow.site"
+                    android:pathPrefix="/" />
+            </intent-filter>
+
         </activity>
 
         <provider

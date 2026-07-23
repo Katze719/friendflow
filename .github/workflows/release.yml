@@ -282,6 +282,14 @@ jobs:
             exit 1
           fi
 
+          if ! /usr/libexec/PlistBuddy \
+            -c 'Print :Entitlements:com.apple.developer.associated-domains' \
+            "$PROFILE_PLIST" | grep -q 'applinks:friendflow.site'; then
+            echo "Provisioning profile is missing the Associated Domains capability for applinks:friendflow.site."
+            echo "Enable Associated Domains for $APP_BUNDLE_ID and regenerate IOS_PROVISIONING_PROFILE_BASE64."
+            exit 1
+          fi
+
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
           cp "$PROFILE_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
 

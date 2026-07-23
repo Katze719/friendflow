@@ -115,6 +115,8 @@ deployments need:
 | `INSTANCE_NAME`      | `friendflow`   | Public instance label shown on auth screens and used as the display name when mobile clients validate this server.                                                      |
 | `REGISTRATION_MODE`  | `approval`     | `approval` = new sign-ups wait for an admin; `open` = new sign-ups are auto-approved and can log in immediately.                                                        |
 | `APP_BASE_URL`       | first `CORS_ORIGIN` | Public URL of the frontend. Used to build clickable links in outbound emails (currently only password reset).                                                     |
+| `APP_LINK_IOS_TEAM_ID` | *(empty)* | Apple Developer Team ID used to serve `/.well-known/apple-app-site-association`. Set only on the official `friendflow.site` deployment. |
+| `APP_LINK_ANDROID_SHA256_CERT_FINGERPRINTS` | *(empty)* | Comma-separated SHA-256 signing-certificate fingerprints used in `/.well-known/assetlinks.json`. Include both Google Play App Signing and separately distributed APK certificates when applicable. |
 | `APP_MIN_SUPPORTED_VERSION` | *(empty)* | Optional minimum mobile/web client version accepted by this backend. Older logged-in clients show an update-required screen. Leave empty unless you intentionally drop old app support. |
 | `APP_LATEST_VERSION` | build version  | Optional override for the newest published app version shown as a non-blocking update hint. When unset, `/api/app/version` uses the backend build's git-derived version. |
 | `APP_IOS_STORE_URL`  | *(empty)*      | Optional iOS App Store URL used by update prompts.                                                                                                                      |
@@ -304,6 +306,36 @@ instance from a secondary button in the auth flow.
 Optional native packaging overrides:
 - `CAPACITOR_APP_ID` for the Android/iOS bundle id
 - `CAPACITOR_APP_NAME` for the app name shown by the native shell
+
+### Native links for friendflow.site
+
+The official Android and iOS apps claim every HTTPS route below
+`https://friendflow.site/`. When the app is installed, the operating system
+opens the route in the app; otherwise the same URL continues to work in the
+browser. Opening an official link while a custom instance is active switches
+to the default `friendflow.site` instance without deleting the custom
+instance's saved session.
+
+The official deployment must expose the two platform verification documents:
+
+- Set `APP_LINK_IOS_TEAM_ID` to the 10-character Apple Developer Team ID.
+- Set `APP_LINK_ANDROID_SHA256_CERT_FINGERPRINTS` to the SHA-256 certificate
+  fingerprint shown under Google Play Console → App integrity → App signing.
+  If release APKs are installed outside Google Play, append that signing
+  certificate's fingerprint after a comma.
+
+The bundled nginx configuration proxies
+`/.well-known/apple-app-site-association` and
+`/.well-known/assetlinks.json` to the backend, which returns 404 while their
+corresponding setting is empty. Self-hosted domains therefore remain regular
+browser links by default.
+
+For iOS, enable the **Associated Domains** capability for bundle id
+`app.friendflow.mobile` in the Apple Developer portal and regenerate the
+distribution provisioning profile. Release CI validates this before
+archiving. Existing installed app versions cannot gain App/Universal Link
+support retroactively; publish new Android and iOS builds after deploying the
+verification documents.
 
 ### App/backend compatibility
 

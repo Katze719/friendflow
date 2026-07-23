@@ -97,6 +97,9 @@ pub struct Config {
     pub smtp: Option<SmtpConfig>,
     pub google_calendar: Option<GoogleCalendarOAuth>,
     pub app_version: AppVersionConfig,
+    /// Native app/domain association metadata served from `/.well-known`.
+    /// Both fields are optional so self-hosted instances stay unaffected.
+    pub app_links: AppLinksConfig,
     /// IANA timezone used when mapping all-day calendar instants (stored as UTC)
     /// to calendar dates for Google Calendar `date` fields. Align with where most
     /// users pick dates in the UI (browser local → UTC); default Europe/Berlin.
@@ -110,6 +113,12 @@ pub struct AppVersionConfig {
     pub ios_store_url: Option<String>,
     pub android_store_url: Option<String>,
     pub update_message: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct AppLinksConfig {
+    pub ios_team_id: Option<String>,
+    pub android_sha256_cert_fingerprints: Vec<String>,
 }
 
 impl Config {
@@ -164,6 +173,8 @@ impl Config {
 
         let app_version = parse_app_version_config();
 
+        let app_links = parse_app_links_config()?;
+
         let app_timezone = parse_app_timezone()?;
 
         Ok(Self {
@@ -178,6 +189,7 @@ impl Config {
             smtp,
             google_calendar,
             app_version,
+            app_links,
             app_timezone,
         })
     }
@@ -191,6 +203,51 @@ fn parse_app_version_config() -> AppVersionConfig {
         android_store_url: optional_env("APP_ANDROID_STORE_URL"),
         update_message: optional_env("APP_UPDATE_MESSAGE"),
     }
+}
+
+fn parse_app_links_config() -> Result<AppLinksConfig> {
+    let ios_team_id = optional_env("APP_LINK_IOS_TEAM_ID")
+        .map(|value| value.to_ascii_uppercase())
+        .map(|value| {
+            if value.len() == 10 && value.chars().all(|c| c.is_ascii_alphanumeric()) {
+                Ok(value)
+            } else {
+                anyhow::bail!(
+                    "APP_LINK_IOS_TEAM_ID must be the 10-character Apple Developer Team ID"
+                )
+            }
+        })
+        .transpose()?;
+
+    let android_sha256_cert_fingerprints =
+        match optional_env("APP_LINK_ANDROID_SHA256_CERT_FINGERPRINTS") {
+            Some(raw) => raw
+                .split(',')
+                .map(normalize_sha256_fingerprint)
+                .collect::<Result<Vec<_>>>()?,
+            None => Vec::new(),
+        };
+
+    Ok(AppLinksConfig {
+        ios_team_id,
+        android_sha256_cert_fingerprints,
+    })
+}
+
+fn normalize_sha256_fingerprint(raw: &str) -> Result<String> {
+    let compact = raw.trim().replace(':', "").to_ascii_uppercase();
+    if compact.len() != 64 || !compact.chars().all(|c| c.is_ascii_hexdigit()) {
+        anyhow::bail!(
+            "APP_LINK_ANDROID_SHA256_CERT_FINGERPRINTS entries must be SHA-256 certificate fingerprints"
+        );
+    }
+
+    Ok(compact
+        .as_bytes()
+        .chunks(2)
+        .map(|pair| std::str::from_utf8(pair).expect("ASCII hex"))
+        .collect::<Vec<_>>()
+        .join(":"))
 }
 
 fn optional_env(key: &str) -> Option<String> {
@@ -256,6 +313,27 @@ fn parse_google_calendar_oauth() -> Result<Option<GoogleCalendarOAuth>> {
         redirect_uri,
         token_encryption_key,
     }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::normalize_sha256_fingerprint;
+
+    #[test]
+    fn app_link_fingerprint_is_normalized_for_assetlinks() {
+        let raw = "aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899";
+        let normalized = normalize_sha256_fingerprint(raw).unwrap();
+
+        assert_eq!(
+            normalized,
+            "AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99"
+        );
+    }
+
+    #[test]
+    fn invalid_app_link_fingerprint_is_rejected() {
+        assert!(normalize_sha256_fingerprint("not-a-certificate").is_err());
+    }
 }
 
 fn parse_smtp_config() -> Result<Option<SmtpConfig>> {

@@ -157,6 +157,26 @@ export function buildApiUrl(baseUrl: string, path: string): string {
   return `${baseUrl}${path}`;
 }
 
+/**
+ * Builds a browser-shareable URL for a route on an instance.
+ *
+ * Capacitor serves the bundled SPA from https://localhost, so its
+ * window.location.origin must never leak into links shared with other people.
+ * Native and custom-instance builds have an explicit instance base URL. A
+ * regular same-origin web deployment intentionally falls back to its browser
+ * origin.
+ */
+export function buildPublicAppUrl(
+  path: string,
+  instance: AppInstance = getActiveInstance(),
+): string {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const baseUrl =
+    instance.baseUrl ||
+    (typeof window !== "undefined" ? window.location.origin.replace(/\/$/, "") : "");
+  return `${baseUrl}${normalizedPath}`;
+}
+
 export async function fetchAuthConfigForBaseUrl(
   baseUrl: string,
   signal?: AbortSignal,
