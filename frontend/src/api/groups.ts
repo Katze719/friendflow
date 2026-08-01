@@ -1,5 +1,5 @@
 import { api } from "./client";
-import type { GroupDetail, GroupSummary } from "./types";
+import type { GroupDetail, GroupPerson, GroupSummary } from "./types";
 
 export const groupsApi = {
   list: () => api<GroupSummary[]>("/api/groups"),
@@ -25,6 +25,25 @@ export const groupsApi = {
     api<{ ok: boolean }>(`/api/groups/${id}/members/${memberId}`, {
       method: "DELETE",
     }),
+  createPerson: (id: string, displayName: string) =>
+    api<GroupPerson>(`/api/groups/${id}/people`, {
+      method: "POST",
+      body: { display_name: displayName },
+    }),
+  updatePerson: (
+    id: string,
+    personId: string,
+    payload: { display_name: string; active: boolean },
+  ) =>
+    api<GroupPerson>(`/api/groups/${id}/people/${personId}`, {
+      method: "PUT",
+      body: payload,
+    }),
+  linkPerson: (id: string, personId: string, userId: string) =>
+    api<{ ok: boolean; person_id: string }>(
+      `/api/groups/${id}/people/${personId}/link`,
+      { method: "POST", body: { user_id: userId } },
+    ),
   openInvites: (id: string) =>
     api<{ invite_code: string }>(`/api/groups/${id}/invite/open`, {
       method: "POST",

@@ -131,6 +131,7 @@ export default function Dashboard() {
               onClick={() => {
                 setShowJoin((v) => !v);
                 setShowCreate(false);
+                setRevealForm(true);
               }}
             >
               <UserPlus className="h-4 w-4" /> {t("dashboard.join")}
@@ -140,6 +141,7 @@ export default function Dashboard() {
               onClick={() => {
                 setShowCreate((v) => !v);
                 setShowJoin(false);
+                setRevealForm(true);
               }}
             >
               <Plus className="h-4 w-4" /> {t("dashboard.newGroup")}
@@ -147,21 +149,6 @@ export default function Dashboard() {
           </div>
         </div>
       </section>
-
-      {showOnboarding && (
-        <OnboardingPanel
-          hasGroup={(groups?.length ?? 0) > 0}
-          hasOpenedTool={hasOpenedTool}
-          onCreate={() => {
-            setShowCreate(true);
-            setShowJoin(false);
-          }}
-          onDismiss={() => {
-            dismissOnboarding();
-            setOnboardingHidden(true);
-          }}
-        />
-      )}
 
       {(showCreate || showJoin) && (
         <div ref={formRegionRef} className="scroll-mt-24">
@@ -182,6 +169,22 @@ export default function Dashboard() {
             />
           )}
         </div>
+      )}
+
+      {showOnboarding && (
+        <OnboardingPanel
+          hasGroup={(groups?.length ?? 0) > 0}
+          hasOpenedTool={hasOpenedTool}
+          onCreate={() => {
+            setShowCreate(true);
+            setShowJoin(false);
+            setRevealForm(true);
+          }}
+          onDismiss={() => {
+            dismissOnboarding();
+            setOnboardingHidden(true);
+          }}
+        />
       )}
 
       {error && (

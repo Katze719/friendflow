@@ -401,7 +401,13 @@ export default function SplitwiseOverviewPage() {
       {paymentInitial !== null && (
         <PaymentDialog
           groupId={group.id}
-          members={group.members}
+          people={group.people.filter(
+            (person) =>
+              person.active ||
+              summary.balances.some(
+                (balance) => balance.user_id === person.id && balance.balance_cents !== 0,
+              ),
+          )}
           currency={currency}
           initial={paymentInitial}
           onClose={() => setPaymentInitial(null)}

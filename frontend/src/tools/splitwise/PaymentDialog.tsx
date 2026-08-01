@@ -7,7 +7,8 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import { ApiError } from "../../api/client";
-import type { Member } from "../../api/types";
+import type { GroupPerson } from "../../api/types";
+import GroupPersonCreator from "../../components/GroupPersonCreator";
 import {
   datetimeLocalToIso,
   isoToDatetimeLocal,
@@ -16,7 +17,7 @@ import { splitwiseApi } from "./api";
 
 interface PaymentDialogProps {
   groupId: string;
-  members: Member[];
+  people: GroupPerson[];
   currency: string;
   /** Prefilled sender / recipient / amount (e.g. from a settlement row). */
   initial?: {
@@ -34,7 +35,7 @@ interface PaymentDialogProps {
  */
 export default function PaymentDialog({
   groupId,
-  members,
+  people: initialPeople,
   currency,
   initial,
   onClose,
@@ -42,8 +43,9 @@ export default function PaymentDialog({
 }: PaymentDialogProps) {
   const { t } = useTranslation();
 
-  const firstMember = members[0]?.id ?? "";
-  const secondMember = members[1]?.id ?? firstMember;
+  const [people, setPeople] = useState(initialPeople);
+  const firstMember = people[0]?.id ?? "";
+  const secondMember = people[1]?.id ?? firstMember;
 
   const [fromUser, setFromUser] = useState<string>(
     initial?.fromUserId ?? firstMember,
@@ -148,9 +150,10 @@ export default function PaymentDialog({
               onChange={(e) => setFromUser(e.target.value)}
               required
             >
-              {members.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.display_name}
+              {people.map((person) => (
+                <option key={person.id} value={person.id}>
+                  {person.display_name}
+                  {person.kind === "guest" ? ` (${t("group.people.guest")})` : ""}
                 </option>
               ))}
             </select>
@@ -166,14 +169,20 @@ export default function PaymentDialog({
               onChange={(e) => setToUser(e.target.value)}
               required
             >
-              {members.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.display_name}
+              {people.map((person) => (
+                <option key={person.id} value={person.id}>
+                  {person.display_name}
+                  {person.kind === "guest" ? ` (${t("group.people.guest")})` : ""}
                 </option>
               ))}
             </select>
           </div>
         </div>
+
+        <GroupPersonCreator
+          groupId={groupId}
+          onCreated={(person) => setPeople((current) => [...current, person])}
+        />
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1">

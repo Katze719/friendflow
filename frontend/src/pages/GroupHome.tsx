@@ -1,10 +1,13 @@
 import {
+  Archive,
   ArrowRight,
   Copy,
   Link2,
   Lock,
   LogOut,
+  Pencil,
   RefreshCw,
+  RotateCcw,
   Share2,
   Star,
   Trash2,
@@ -19,6 +22,7 @@ import { groupsApi } from "../api/groups";
 import type { GroupDetail } from "../api/types";
 import LoadingState from "../components/LoadingState";
 import GroupToolSwitcher from "../components/GroupToolSwitcher";
+import GroupPersonCreator from "../components/GroupPersonCreator";
 import PageHeader from "../components/PageHeader";
 import { useAuth } from "../context/AuthContext";
 import { formatDate } from "../lib/format";
@@ -38,6 +42,8 @@ export default function GroupHome() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<"code" | "link" | null>(null);
   const [showQr, setShowQr] = useState(false);
+  const [editingPerson, setEditingPerson] = useState<string | null>(null);
+  const [personName, setPersonName] = useState("");
   const { isShortcut, toggleShortcut } = useFavoriteTools();
 
   // Favorites first, otherwise preserve the declaration order from `tools`.
@@ -200,6 +206,55 @@ export default function GroupHome() {
     }
   }
 
+  async function onSavePerson(personId: string, active: boolean) {
+    if (!group || !personName.trim()) return;
+    try {
+      await groupsApi.updatePerson(group.id, personId, {
+        display_name: personName.trim(),
+        active,
+      });
+      setEditingPerson(null);
+      reload();
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : t("common.error"));
+    }
+  }
+
+  async function onSetPersonActive(person: GroupDetail["people"][number], active: boolean) {
+    if (!group) return;
+    try {
+      await groupsApi.updatePerson(group.id, person.id, {
+        display_name: person.display_name,
+        active,
+      });
+      reload();
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : t("common.error"));
+    }
+  }
+
+  async function onLinkPerson(person: GroupDetail["people"][number], userId: string) {
+    if (!group || !userId) return;
+    const member = group.members.find((candidate) => candidate.id === userId);
+    if (!member) return;
+    const ok = await confirm({
+      title: t("group.people.linkTitle"),
+      message: t("group.people.linkConfirm", {
+        guest: person.display_name,
+        member: member.display_name,
+      }),
+      confirmLabel: t("group.people.link"),
+    });
+    if (!ok) return;
+    try {
+      await groupsApi.linkPerson(group.id, person.id, userId);
+      toast.success(t("group.people.linked"));
+      reload();
+    } catch (e) {
+      toast.error(e instanceof ApiError ? e.message : t("common.error"));
+    }
+  }
+
   if (error && !group) {
     return <p className="alert-error">{error}</p>;
   }
@@ -338,6 +393,80 @@ export default function GroupHome() {
               );
             })}
           </ul>
+        </div>
+
+        <div className="card p-5">
+          <h2 className="font-semibold">{t("group.people.title")}</h2>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            {t("group.people.description")}
+          </p>
+          <ul className="my-3 divide-y divide-slate-100 dark:divide-slate-800">
+            {group.people.filter((person) => person.kind === "guest").map((person) => (
+              <li key={person.id} className="space-y-2 py-3 text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  {editingPerson === person.id ? (
+                    <div className="flex flex-1 gap-2">
+                      <input
+                        className="input min-w-0 flex-1"
+                        value={personName}
+                        maxLength={80}
+                        onChange={(event) => setPersonName(event.target.value)}
+                      />
+                      <button className="btn-primary" onClick={() => onSavePerson(person.id, person.active)}>
+                        {t("common.save")}
+                      </button>
+                    </div>
+                  ) : (
+                    <div>
+                      <span className={person.active ? "font-medium" : "font-medium text-slate-400 line-through"}>
+                        {person.display_name}
+                      </span>
+                      {!person.active && (
+                        <span className="ml-2 text-xs text-slate-400">{t("group.people.archived")}</span>
+                      )}
+                    </div>
+                  )}
+                  {isOwner && editingPerson !== person.id && (
+                    <div className="flex gap-1">
+                      <button
+                        className="btn-ghost"
+                        title={t("common.edit")}
+                        onClick={() => {
+                          setEditingPerson(person.id);
+                          setPersonName(person.display_name);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        className="btn-ghost"
+                        title={person.active ? t("group.people.archive") : t("group.people.restore")}
+                        onClick={() => onSetPersonActive(person, !person.active)}
+                      >
+                        {person.active ? <Archive className="h-4 w-4" /> : <RotateCcw className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {isOwner && person.active && group.members.length > 0 && (
+                  <select
+                    className="input text-xs"
+                    value=""
+                    onChange={(event) => onLinkPerson(person, event.target.value)}
+                  >
+                    <option value="">{t("group.people.linkSelect")}</option>
+                    {group.members.map((member) => (
+                      <option key={member.id} value={member.id}>{member.display_name}</option>
+                    ))}
+                  </select>
+                )}
+              </li>
+            ))}
+          </ul>
+          {group.people.every((person) => person.kind !== "guest") && (
+            <p className="mb-3 text-sm text-slate-500 dark:text-slate-400">{t("group.people.empty")}</p>
+          )}
+          <GroupPersonCreator groupId={group.id} onCreated={() => reload()} />
         </div>
 
         <div className="card space-y-4 p-5">

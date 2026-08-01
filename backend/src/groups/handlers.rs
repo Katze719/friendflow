@@ -36,6 +36,15 @@ pub struct Member {
 }
 
 #[derive(Debug, Serialize)]
+pub struct GroupPerson {
+    pub id: Uuid,
+    pub user_id: Option<Uuid>,
+    pub display_name: String,
+    pub kind: String,
+    pub active: bool,
+}
+
+#[derive(Debug, Serialize)]
 pub struct GroupDetail {
     pub id: Uuid,
     pub name: String,
@@ -45,6 +54,7 @@ pub struct GroupDetail {
     pub created_by: Uuid,
     pub created_at: DateTime<Utc>,
     pub members: Vec<Member>,
+    pub people: Vec<GroupPerson>,
     pub my_role: String,
 }
 
@@ -60,6 +70,24 @@ pub struct CreateRequest {
 pub struct JoinRequest {
     #[validate(length(min = 1, max = 64))]
     pub invite_code: String,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct CreatePersonRequest {
+    #[validate(length(min = 1, max = 80))]
+    pub display_name: String,
+}
+
+#[derive(Debug, Deserialize, Validate)]
+pub struct UpdatePersonRequest {
+    #[validate(length(min = 1, max = 80))]
+    pub display_name: String,
+    pub active: bool,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct LinkPersonRequest {
+    pub user_id: Uuid,
 }
 
 fn generate_invite_code() -> String {
@@ -80,6 +108,10 @@ pub async fn create(
     payload.validate()?;
     let name = payload.name.trim().to_string();
     let currency = payload.currency.as_deref().unwrap_or("EUR").to_uppercase();
+    let (display_name,): (String,) = sqlx::query_as("SELECT display_name FROM users WHERE id = $1")
+        .bind(user.id)
+        .fetch_one(&state.db)
+        .await?;
 
     let mut tx = state.db.begin().await?;
 
@@ -103,6 +135,16 @@ pub async fn create(
     )
     .bind(row.0)
     .bind(user.id)
+    .execute(&mut *tx)
+    .await?;
+
+    sqlx::query(
+        "INSERT INTO group_people (group_id, id, user_id, display_name, kind, created_by)
+         VALUES ($1, $2, $2, $3, 'member', $2)",
+    )
+    .bind(row.0)
+    .bind(user.id)
+    .bind(&display_name)
     .execute(&mut *tx)
     .await?;
 
@@ -157,6 +199,12 @@ pub async fn join(
         return Err(AppError::NotFound("invalid invite code".into()));
     };
 
+    let (display_name,): (String,) = sqlx::query_as("SELECT display_name FROM users WHERE id = $1")
+        .bind(user.id)
+        .fetch_one(&state.db)
+        .await?;
+
+    let mut tx = state.db.begin().await?;
     sqlx::query(
         "INSERT INTO group_members (group_id, user_id, role)
          VALUES ($1, $2, 'member')
@@ -164,8 +212,22 @@ pub async fn join(
     )
     .bind(id)
     .bind(user.id)
-    .execute(&state.db)
+    .execute(&mut *tx)
     .await?;
+
+    sqlx::query(
+        "INSERT INTO group_people (group_id, id, user_id, display_name, kind, active, created_by)
+         VALUES ($1, $2, $2, $3, 'member', TRUE, $2)
+         ON CONFLICT (group_id, user_id) DO UPDATE
+         SET active = TRUE, display_name = EXCLUDED.display_name, updated_at = NOW()",
+    )
+    .bind(id)
+    .bind(user.id)
+    .bind(&display_name)
+    .execute(&mut *tx)
+    .await?;
+
+    tx.commit().await?;
 
     let member_count: (i64,) =
         sqlx::query_as("SELECT COUNT(*)::BIGINT FROM group_members WHERE group_id = $1")
@@ -284,6 +346,29 @@ pub async fn detail(
         })
         .collect();
 
+    let people = sqlx::query_as::<_, (Uuid, Option<Uuid>, String, String, bool)>(
+        "SELECT gp.id, gp.user_id,
+                CASE WHEN gp.kind = 'member' THEN COALESCE(u.display_name, gp.display_name)
+                     ELSE gp.display_name END,
+                gp.kind, gp.active
+         FROM group_people gp
+         LEFT JOIN users u ON u.id = gp.user_id
+         WHERE gp.group_id = $1
+         ORDER BY gp.active DESC, lower(CASE WHEN gp.kind = 'member' THEN COALESCE(u.display_name, gp.display_name) ELSE gp.display_name END)",
+    )
+    .bind(gid)
+    .fetch_all(&state.db)
+    .await?
+    .into_iter()
+    .map(|(id, user_id, display_name, kind, active)| GroupPerson {
+        id,
+        user_id,
+        display_name,
+        kind,
+        active,
+    })
+    .collect();
+
     Ok(Json(GroupDetail {
         id: gid,
         name,
@@ -292,6 +377,7 @@ pub async fn detail(
         created_by,
         created_at,
         members,
+        people,
         my_role,
     }))
 }
@@ -324,6 +410,15 @@ pub async fn leave(
         .bind(user.id)
         .execute(&mut *tx)
         .await?;
+
+    sqlx::query(
+        "UPDATE group_people SET active = FALSE, updated_at = NOW()
+         WHERE group_id = $1 AND user_id = $2",
+    )
+    .bind(id)
+    .bind(user.id)
+    .execute(&mut *tx)
+    .await?;
 
     let remaining: (i64,) =
         sqlx::query_as("SELECT COUNT(*)::BIGINT FROM group_members WHERE group_id = $1")
@@ -421,6 +516,15 @@ pub async fn remove_member(
         .execute(&mut *tx)
         .await?;
 
+    sqlx::query(
+        "UPDATE group_people SET active = FALSE, updated_at = NOW()
+         WHERE group_id = $1 AND user_id = $2",
+    )
+    .bind(id)
+    .bind(member_id)
+    .execute(&mut *tx)
+    .await?;
+
     if target_role == "owner" {
         let has_owner: (i64,) = sqlx::query_as(
             "SELECT COUNT(*)::BIGINT FROM group_members WHERE group_id = $1 AND role = 'owner'",
@@ -447,6 +551,179 @@ pub async fn remove_member(
 
     tx.commit().await?;
     Ok(Json(serde_json::json!({ "ok": true })))
+}
+
+pub async fn create_person(
+    State(state): State<AppState>,
+    user: AuthUser,
+    Path(group_id): Path<Uuid>,
+    Json(payload): Json<CreatePersonRequest>,
+) -> AppResult<Json<GroupPerson>> {
+    payload.validate()?;
+    super::ensure_member(&state, group_id, user.id).await?;
+    let display_name = payload.display_name.trim();
+    if display_name.is_empty() {
+        return Err(AppError::BadRequest(
+            "display_name must not be empty".into(),
+        ));
+    }
+
+    let (id,): (Uuid,) = sqlx::query_as(
+        "INSERT INTO group_people (group_id, display_name, kind, created_by)
+         VALUES ($1, $2, 'guest', $3)
+         RETURNING id",
+    )
+    .bind(group_id)
+    .bind(display_name)
+    .bind(user.id)
+    .fetch_one(&state.db)
+    .await?;
+
+    Ok(Json(GroupPerson {
+        id,
+        user_id: None,
+        display_name: display_name.to_owned(),
+        kind: "guest".into(),
+        active: true,
+    }))
+}
+
+pub async fn update_person(
+    State(state): State<AppState>,
+    user: AuthUser,
+    Path((group_id, person_id)): Path<(Uuid, Uuid)>,
+    Json(payload): Json<UpdatePersonRequest>,
+) -> AppResult<Json<GroupPerson>> {
+    payload.validate()?;
+    let role = role_in_group(&state, group_id, user.id).await?;
+    if role != "owner" && !user.is_admin {
+        return Err(AppError::Forbidden);
+    }
+    let display_name = payload.display_name.trim();
+    if display_name.is_empty() {
+        return Err(AppError::BadRequest(
+            "display_name must not be empty".into(),
+        ));
+    }
+
+    let row: Option<(Uuid, String, bool)> = sqlx::query_as(
+        "UPDATE group_people
+         SET display_name = $3, active = $4, updated_at = NOW()
+         WHERE group_id = $1 AND id = $2 AND kind = 'guest'
+         RETURNING id, kind, active",
+    )
+    .bind(group_id)
+    .bind(person_id)
+    .bind(display_name)
+    .bind(payload.active)
+    .fetch_optional(&state.db)
+    .await?;
+    let Some((id, kind, active)) = row else {
+        return Err(AppError::NotFound("guest person not found".into()));
+    };
+
+    Ok(Json(GroupPerson {
+        id,
+        user_id: None,
+        display_name: display_name.to_owned(),
+        kind,
+        active,
+    }))
+}
+
+pub async fn link_person(
+    State(state): State<AppState>,
+    user: AuthUser,
+    Path((group_id, person_id)): Path<(Uuid, Uuid)>,
+    Json(payload): Json<LinkPersonRequest>,
+) -> AppResult<Json<serde_json::Value>> {
+    let role = role_in_group(&state, group_id, user.id).await?;
+    if role != "owner" && !user.is_admin {
+        return Err(AppError::Forbidden);
+    }
+    if person_id == payload.user_id {
+        return Err(AppError::BadRequest(
+            "person is already linked to that user".into(),
+        ));
+    }
+
+    let mut tx = state.db.begin().await?;
+    let source: Option<(String,)> =
+        sqlx::query_as("SELECT kind FROM group_people WHERE group_id = $1 AND id = $2 FOR UPDATE")
+            .bind(group_id)
+            .bind(person_id)
+            .fetch_optional(&mut *tx)
+            .await?;
+    if !matches!(source, Some((ref kind,)) if kind == "guest") {
+        return Err(AppError::NotFound("guest person not found".into()));
+    }
+
+    let target: Option<(Uuid,)> = sqlx::query_as(
+        "SELECT gp.id
+         FROM group_people gp
+         INNER JOIN group_members gm ON gm.group_id = gp.group_id AND gm.user_id = gp.user_id
+         WHERE gp.group_id = $1 AND gp.user_id = $2 AND gp.kind = 'member'",
+    )
+    .bind(group_id)
+    .bind(payload.user_id)
+    .fetch_optional(&mut *tx)
+    .await?;
+    let Some((target_id,)) = target else {
+        return Err(AppError::BadRequest(
+            "target user is not a group member".into(),
+        ));
+    };
+
+    sqlx::query("UPDATE expenses SET paid_by = $3 WHERE group_id = $1 AND paid_by = $2")
+        .bind(group_id)
+        .bind(person_id)
+        .bind(target_id)
+        .execute(&mut *tx)
+        .await?;
+
+    sqlx::query(
+        "INSERT INTO expense_splits (expense_id, user_id, amount_cents, group_id)
+         SELECT expense_id, $3, amount_cents, group_id
+         FROM expense_splits WHERE group_id = $1 AND user_id = $2
+         ON CONFLICT (expense_id, user_id) DO UPDATE
+         SET amount_cents = expense_splits.amount_cents + EXCLUDED.amount_cents",
+    )
+    .bind(group_id)
+    .bind(person_id)
+    .bind(target_id)
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query("DELETE FROM expense_splits WHERE group_id = $1 AND user_id = $2")
+        .bind(group_id)
+        .bind(person_id)
+        .execute(&mut *tx)
+        .await?;
+
+    sqlx::query(
+        "UPDATE splitwise_payments SET from_user = $3 WHERE group_id = $1 AND from_user = $2",
+    )
+    .bind(group_id)
+    .bind(person_id)
+    .bind(target_id)
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query("UPDATE splitwise_payments SET to_user = $3 WHERE group_id = $1 AND to_user = $2")
+        .bind(group_id)
+        .bind(person_id)
+        .bind(target_id)
+        .execute(&mut *tx)
+        .await?;
+
+    sqlx::query("DELETE FROM group_people WHERE group_id = $1 AND id = $2")
+        .bind(group_id)
+        .bind(person_id)
+        .execute(&mut *tx)
+        .await?;
+    tx.commit().await?;
+
+    Ok(Json(
+        serde_json::json!({ "ok": true, "person_id": target_id }),
+    ))
 }
 
 /// Returns the caller's role in the given group, erroring with

@@ -210,15 +210,26 @@ pub async fn summary(
         .await?;
 
     let members: Vec<(Uuid, String)> = sqlx::query_as(
-        "SELECT u.id, u.display_name
-         FROM group_members gm
-         INNER JOIN users u ON u.id = gm.user_id
-         WHERE gm.group_id = $1
-         ORDER BY u.display_name",
+        "SELECT gp.id,
+                CASE WHEN gp.kind = 'member' THEN COALESCE(u.display_name, gp.display_name)
+                     ELSE gp.display_name END
+         FROM group_people gp
+         LEFT JOIN users u ON u.id = gp.user_id
+         WHERE gp.group_id = $1
+         ORDER BY lower(CASE WHEN gp.kind = 'member' THEN COALESCE(u.display_name, gp.display_name) ELSE gp.display_name END)",
     )
     .bind(group_id)
     .fetch_all(&state.db)
     .await?;
+    let active_ids: std::collections::HashSet<Uuid> = sqlx::query_as::<_, (Uuid,)>(
+        "SELECT id FROM group_people WHERE group_id = $1 AND active = TRUE",
+    )
+    .bind(group_id)
+    .fetch_all(&state.db)
+    .await?
+    .into_iter()
+    .map(|(id,)| id)
+    .collect();
 
     let paid_rows: Vec<(Uuid, i64)> = sqlx::query_as(
         "SELECT paid_by, COALESCE(SUM(amount_cents), 0)::BIGINT
@@ -286,6 +297,7 @@ pub async fn summary(
                 balance_cents: p - o + s - r,
             }
         })
+        .filter(|balance| balance.balance_cents != 0 || active_ids.contains(&balance.user_id))
         .collect();
 
     let my_balance_cents = balances
@@ -379,9 +391,12 @@ pub async fn list_expenses(
         Option<String>,
     )> = sqlx::query_as(
         "SELECT e.id, e.group_id, e.description, e.amount_cents, e.happened_at, e.created_at,
-                    e.paid_by, u.display_name, e.trip_id, t.name
+                    e.paid_by,
+                    CASE WHEN gp.kind = 'member' THEN COALESCE(u.display_name, gp.display_name) ELSE gp.display_name END,
+                    e.trip_id, t.name
              FROM expenses e
-             INNER JOIN users u ON u.id = e.paid_by
+             INNER JOIN group_people gp ON gp.group_id = e.group_id AND gp.id = e.paid_by
+             LEFT JOIN users u ON u.id = gp.user_id
              LEFT JOIN trips t ON t.id = e.trip_id
              WHERE e.group_id = $1
              ORDER BY e.happened_at DESC, e.created_at DESC",
@@ -391,10 +406,13 @@ pub async fn list_expenses(
     .await?;
 
     let split_rows: Vec<(Uuid, Uuid, String, i64)> = sqlx::query_as(
-        "SELECT es.expense_id, es.user_id, u.display_name, es.amount_cents
+        "SELECT es.expense_id, es.user_id,
+                CASE WHEN gp.kind = 'member' THEN COALESCE(u.display_name, gp.display_name) ELSE gp.display_name END,
+                es.amount_cents
          FROM expense_splits es
-         INNER JOIN users u ON u.id = es.user_id
          INNER JOIN expenses e ON e.id = es.expense_id
+         INNER JOIN group_people gp ON gp.group_id = es.group_id AND gp.id = es.user_id
+         LEFT JOIN users u ON u.id = gp.user_id
          WHERE e.group_id = $1",
     )
     .bind(group_id)
@@ -473,14 +491,15 @@ async fn ensure_trip_in_group(
 }
 
 /// Shared validation for create/update: splits must be non-empty, sum up to
-/// `amount_cents`, non-negative, and every referenced user id must be a
-/// group member.
+/// `amount_cents`, non-negative, and every referenced id must be a person in
+/// the group.
 async fn validate_splits(
     state: &AppState,
     group_id: Uuid,
     amount_cents: i64,
     paid_by: Uuid,
     splits: &[SplitInput],
+    allowed_inactive: &std::collections::HashSet<Uuid>,
 ) -> AppResult<()> {
     if splits.is_empty() {
         return Err(AppError::BadRequest("splits must not be empty".into()));
@@ -497,19 +516,36 @@ async fn validate_splits(
         }
     }
 
-    let member_ids: Vec<(Uuid,)> =
-        sqlx::query_as("SELECT user_id FROM group_members WHERE group_id = $1")
+    let unique_people: std::collections::HashSet<Uuid> =
+        splits.iter().map(|split| split.user_id).collect();
+    if unique_people.len() != splits.len() {
+        return Err(AppError::BadRequest(
+            "a person may only appear once in splits".into(),
+        ));
+    }
+
+    let people: Vec<(Uuid, bool)> =
+        sqlx::query_as("SELECT id, active FROM group_people WHERE group_id = $1")
             .bind(group_id)
             .fetch_all(&state.db)
             .await?;
-    let member_set: std::collections::HashSet<Uuid> =
-        member_ids.into_iter().map(|(u,)| u).collect();
-    if !member_set.contains(&paid_by) {
-        return Err(AppError::BadRequest("paid_by is not a member".into()));
+    let people: std::collections::HashMap<Uuid, bool> = people.into_iter().collect();
+    if !people.contains_key(&paid_by) {
+        return Err(AppError::BadRequest(
+            "paid_by is not a person in this group".into(),
+        ));
+    }
+    if !people[&paid_by] && !allowed_inactive.contains(&paid_by) {
+        return Err(AppError::BadRequest("paid_by person is archived".into()));
     }
     for s in splits {
-        if !member_set.contains(&s.user_id) {
-            return Err(AppError::BadRequest("split user is not a member".into()));
+        if !people.contains_key(&s.user_id) {
+            return Err(AppError::BadRequest(
+                "split person is not in this group".into(),
+            ));
+        }
+        if !people[&s.user_id] && !allowed_inactive.contains(&s.user_id) {
+            return Err(AppError::BadRequest("split person is archived".into()));
         }
     }
     Ok(())
@@ -530,9 +566,12 @@ async fn load_expense(state: &AppState, expense_id: Uuid) -> AppResult<Expense> 
         Option<String>,
     ) = sqlx::query_as(
         "SELECT e.id, e.group_id, e.description, e.amount_cents, e.happened_at, e.created_at,
-                e.paid_by, u.display_name, e.trip_id, t.name
+                e.paid_by,
+                CASE WHEN gp.kind = 'member' THEN COALESCE(u.display_name, gp.display_name) ELSE gp.display_name END,
+                e.trip_id, t.name
          FROM expenses e
-         INNER JOIN users u ON u.id = e.paid_by
+         INNER JOIN group_people gp ON gp.group_id = e.group_id AND gp.id = e.paid_by
+         LEFT JOIN users u ON u.id = gp.user_id
          LEFT JOIN trips t ON t.id = e.trip_id
          WHERE e.id = $1",
     )
@@ -542,8 +581,12 @@ async fn load_expense(state: &AppState, expense_id: Uuid) -> AppResult<Expense> 
     .ok_or_else(|| AppError::NotFound("expense not found".into()))?;
 
     let split_rows: Vec<(Uuid, String, i64)> = sqlx::query_as(
-        "SELECT es.user_id, u.display_name, es.amount_cents
-         FROM expense_splits es INNER JOIN users u ON u.id = es.user_id
+        "SELECT es.user_id,
+                CASE WHEN gp.kind = 'member' THEN COALESCE(u.display_name, gp.display_name) ELSE gp.display_name END,
+                es.amount_cents
+         FROM expense_splits es
+         INNER JOIN group_people gp ON gp.group_id = es.group_id AND gp.id = es.user_id
+         LEFT JOIN users u ON u.id = gp.user_id
          WHERE es.expense_id = $1",
     )
     .bind(expense_id)
@@ -601,6 +644,7 @@ pub async fn create_expense(
         payload.amount_cents,
         payload.paid_by,
         &payload.splits,
+        &std::collections::HashSet::new(),
     )
     .await?;
     ensure_trip_in_group(&state, group_id, payload.trip_id).await?;
@@ -625,12 +669,13 @@ pub async fn create_expense(
 
     for s in &payload.splits {
         sqlx::query(
-            "INSERT INTO expense_splits (expense_id, user_id, amount_cents)
-             VALUES ($1, $2, $3)",
+            "INSERT INTO expense_splits (expense_id, user_id, amount_cents, group_id)
+             VALUES ($1, $2, $3, $4)",
         )
         .bind(exp_id.0)
         .bind(s.user_id)
         .bind(s.amount_cents)
+        .bind(group_id)
         .execute(&mut *tx)
         .await?;
     }
@@ -648,25 +693,33 @@ pub async fn update_expense(
 ) -> AppResult<Json<Expense>> {
     payload.validate()?;
     ensure_member(&state, group_id, user.id).await?;
+    // Make sure the expense actually belongs to this group.
+    let existing: Option<(Uuid, Uuid)> =
+        sqlx::query_as("SELECT group_id, paid_by FROM expenses WHERE id = $1")
+            .bind(expense_id)
+            .fetch_optional(&state.db)
+            .await?;
+    let existing = existing.ok_or_else(|| AppError::NotFound("expense not found".into()))?;
+    if existing.0 != group_id {
+        return Err(AppError::NotFound("expense not found".into()));
+    }
+    let mut allowed_inactive = std::collections::HashSet::from([existing.1]);
+    let old_splits: Vec<(Uuid,)> =
+        sqlx::query_as("SELECT user_id FROM expense_splits WHERE expense_id = $1")
+            .bind(expense_id)
+            .fetch_all(&state.db)
+            .await?;
+    allowed_inactive.extend(old_splits.into_iter().map(|(id,)| id));
     validate_splits(
         &state,
         group_id,
         payload.amount_cents,
         payload.paid_by,
         &payload.splits,
+        &allowed_inactive,
     )
     .await?;
     ensure_trip_in_group(&state, group_id, payload.trip_id).await?;
-
-    // Make sure the expense actually belongs to this group.
-    let existing: Option<(Uuid,)> = sqlx::query_as("SELECT group_id FROM expenses WHERE id = $1")
-        .bind(expense_id)
-        .fetch_optional(&state.db)
-        .await?;
-    let existing = existing.ok_or_else(|| AppError::NotFound("expense not found".into()))?;
-    if existing.0 != group_id {
-        return Err(AppError::NotFound("expense not found".into()));
-    }
 
     let happened_at = payload.happened_at.unwrap_or_else(Utc::now);
 
@@ -701,12 +754,13 @@ pub async fn update_expense(
 
     for s in &payload.splits {
         sqlx::query(
-            "INSERT INTO expense_splits (expense_id, user_id, amount_cents)
-             VALUES ($1, $2, $3)",
+            "INSERT INTO expense_splits (expense_id, user_id, amount_cents, group_id)
+             VALUES ($1, $2, $3, $4)",
         )
         .bind(expense_id)
         .bind(s.user_id)
         .bind(s.amount_cents)
+        .bind(group_id)
         .execute(&mut *tx)
         .await?;
     }
@@ -759,12 +813,16 @@ pub async fn list_payments(
         DateTime<Utc>,
     )> = sqlx::query_as(
         "SELECT p.id, p.group_id,
-                p.from_user, uf.display_name,
-                p.to_user,   ut.display_name,
+                p.from_user,
+                CASE WHEN gpf.kind = 'member' THEN COALESCE(uf.display_name, gpf.display_name) ELSE gpf.display_name END,
+                p.to_user,
+                CASE WHEN gpt.kind = 'member' THEN COALESCE(ut.display_name, gpt.display_name) ELSE gpt.display_name END,
                 p.amount_cents, p.note, p.happened_at, p.created_at
          FROM splitwise_payments p
-         INNER JOIN users uf ON uf.id = p.from_user
-         INNER JOIN users ut ON ut.id = p.to_user
+         INNER JOIN group_people gpf ON gpf.group_id = p.group_id AND gpf.id = p.from_user
+         INNER JOIN group_people gpt ON gpt.group_id = p.group_id AND gpt.id = p.to_user
+         LEFT JOIN users uf ON uf.id = gpf.user_id
+         LEFT JOIN users ut ON ut.id = gpt.user_id
          WHERE p.group_id = $1
          ORDER BY p.happened_at DESC, p.created_at DESC",
     )
@@ -819,19 +877,23 @@ pub async fn create_payment(
         ));
     }
 
-    // Both parties must be members of the group.
+    // Both parties must be people belonging to the group.
     let member_ids: Vec<(Uuid,)> =
-        sqlx::query_as("SELECT user_id FROM group_members WHERE group_id = $1")
+        sqlx::query_as("SELECT id FROM group_people WHERE group_id = $1")
             .bind(group_id)
             .fetch_all(&state.db)
             .await?;
     let member_set: std::collections::HashSet<Uuid> =
         member_ids.into_iter().map(|(u,)| u).collect();
     if !member_set.contains(&payload.from_user) {
-        return Err(AppError::BadRequest("from_user is not a member".into()));
+        return Err(AppError::BadRequest(
+            "from_user is not a person in this group".into(),
+        ));
     }
     if !member_set.contains(&payload.to_user) {
-        return Err(AppError::BadRequest("to_user is not a member".into()));
+        return Err(AppError::BadRequest(
+            "to_user is not a person in this group".into(),
+        ));
     }
 
     let happened_at = payload.happened_at.unwrap_or_else(Utc::now);
@@ -895,12 +957,16 @@ async fn load_payment(state: &AppState, payment_id: Uuid) -> AppResult<Payment> 
         DateTime<Utc>,
     ) = sqlx::query_as(
         "SELECT p.id, p.group_id,
-                p.from_user, uf.display_name,
-                p.to_user,   ut.display_name,
+                p.from_user,
+                CASE WHEN gpf.kind = 'member' THEN COALESCE(uf.display_name, gpf.display_name) ELSE gpf.display_name END,
+                p.to_user,
+                CASE WHEN gpt.kind = 'member' THEN COALESCE(ut.display_name, gpt.display_name) ELSE gpt.display_name END,
                 p.amount_cents, p.note, p.happened_at, p.created_at
          FROM splitwise_payments p
-         INNER JOIN users uf ON uf.id = p.from_user
-         INNER JOIN users ut ON ut.id = p.to_user
+         INNER JOIN group_people gpf ON gpf.group_id = p.group_id AND gpf.id = p.from_user
+         INNER JOIN group_people gpt ON gpt.group_id = p.group_id AND gpt.id = p.to_user
+         LEFT JOIN users uf ON uf.id = gpf.user_id
+         LEFT JOIN users ut ON ut.id = gpt.user_id
          WHERE p.id = $1",
     )
     .bind(payment_id)
@@ -920,4 +986,33 @@ async fn load_payment(state: &AppState, payment_id: Uuid) -> AppResult<Payment> 
         happened_at: row.8,
         created_at: row.9,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{net_direct_debts, simplify_debts};
+    use uuid::Uuid;
+
+    #[test]
+    fn guest_people_participate_in_simplified_settlements() {
+        let member = Uuid::from_u128(1);
+        let guest = Uuid::from_u128(2);
+        let creditor = Uuid::from_u128(3);
+
+        let settlements = simplify_debts(&[(member, -400), (guest, -600), (creditor, 1000)]);
+
+        assert_eq!(settlements.len(), 2);
+        assert!(settlements.contains(&(guest, creditor, 600)));
+        assert!(settlements.contains(&(member, creditor, 400)));
+    }
+
+    #[test]
+    fn guest_and_member_direct_debts_net_normally() {
+        let member = Uuid::from_u128(1);
+        let guest = Uuid::from_u128(2);
+
+        let debts = net_direct_debts(&[(guest, member, 900), (member, guest, 250)]);
+
+        assert_eq!(debts, vec![(guest, member, 650)]);
+    }
 }

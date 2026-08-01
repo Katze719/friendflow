@@ -5,6 +5,7 @@ import { ApiError } from "../../api/client";
 import { groupsApi } from "../../api/groups";
 import type { GroupDetail, Trip } from "../../api/types";
 import LoadingState from "../../components/LoadingState";
+import GroupPersonCreator from "../../components/GroupPersonCreator";
 import PageHeader from "../../components/PageHeader";
 import { useAuth } from "../../context/AuthContext";
 import { formatMoney, parseAmountToCents } from "../../lib/format";
@@ -81,8 +82,9 @@ export default function SplitwiseNewExpensePage() {
           // can always flip to "Equal" to redistribute.
           setMode("exact");
         } else {
-          setPaidBy(user?.id ?? g.members[0]?.id ?? "");
-          setParticipants(new Set(g.members.map((m) => m.id)));
+          const activePeople = g.people.filter((person) => person.active);
+          setPaidBy(user?.id ?? activePeople[0]?.id ?? "");
+          setParticipants(new Set(activePeople.map((person) => person.id)));
         }
       })
       .catch((e) => {
@@ -100,10 +102,21 @@ export default function SplitwiseNewExpensePage() {
 
   const amountCents = useMemo(() => parseAmountToCents(amountInput), [amountInput]);
 
+  const selectablePeople = useMemo(() => {
+    if (!group) return [];
+    return group.people.filter(
+      (person) =>
+        person.active ||
+        person.id === paidBy ||
+        participants.has(person.id) ||
+        Boolean(exactAmounts[person.id]),
+    );
+  }, [group, paidBy, participants, exactAmounts]);
+
   const equalSplits = useMemo(() => {
     if (!group) return [] as { user_id: string; amount_cents: number }[];
     if (amountCents == null || amountCents <= 0) return [];
-    const active = group.members.filter((m) => participants.has(m.id));
+    const active = selectablePeople.filter((person) => participants.has(person.id));
     if (active.length === 0) return [];
     const base = Math.floor(amountCents / active.length);
     let remainder = amountCents - base * active.length;
@@ -112,18 +125,18 @@ export default function SplitwiseNewExpensePage() {
       if (remainder > 0) remainder -= 1;
       return { user_id: m.id, amount_cents: base + extra };
     });
-  }, [group, amountCents, participants]);
+  }, [group, amountCents, participants, selectablePeople]);
 
   const exactSplits = useMemo(() => {
     if (!group) return [] as { user_id: string; amount_cents: number }[];
-    return group.members
-      .map((m) => {
-        const raw = exactAmounts[m.id] ?? "";
+    return selectablePeople
+      .map((person) => {
+        const raw = exactAmounts[person.id] ?? "";
         const c = parseAmountToCents(raw);
-        return { user_id: m.id, amount_cents: c ?? 0 };
+        return { user_id: person.id, amount_cents: c ?? 0 };
       })
       .filter((s) => s.amount_cents > 0);
-  }, [group, exactAmounts]);
+  }, [group, selectablePeople, exactAmounts]);
 
   const splits = mode === "equal" ? equalSplits : exactSplits;
   const splitsTotal = splits.reduce((a, s) => a + s.amount_cents, 0);
@@ -237,12 +250,25 @@ export default function SplitwiseNewExpensePage() {
               value={paidBy}
               onChange={(e) => setPaidBy(e.target.value)}
             >
-              {group.members.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.display_name}
+              {selectablePeople.map((person) => (
+                <option key={person.id} value={person.id}>
+                  {person.display_name}
+                  {person.kind === "guest" ? ` (${t("group.people.guest")})` : ""}
                 </option>
               ))}
             </select>
+          </div>
+
+          <div className="sm:col-span-2">
+            <GroupPersonCreator
+              groupId={group.id}
+              onCreated={(person) => {
+                setGroup((current) =>
+                  current ? { ...current, people: [...current.people, person] } : current,
+                );
+                setParticipants((current) => new Set(current).add(person.id));
+              }}
+            />
           </div>
 
           {trips.length > 0 && (
@@ -293,12 +319,12 @@ export default function SplitwiseNewExpensePage() {
 
           {mode === "equal" ? (
             <ul className="mt-2 divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white dark:divide-slate-800 dark:border-slate-700 dark:bg-slate-900">
-              {group.members.map((m) => {
-                const split = equalSplits.find((s) => s.user_id === m.id);
-                const active = participants.has(m.id);
+              {selectablePeople.map((person) => {
+                const split = equalSplits.find((s) => s.user_id === person.id);
+                const active = participants.has(person.id);
                 return (
                   <li
-                    key={m.id}
+                    key={person.id}
                     className="flex items-center justify-between gap-3 px-3 py-2 text-sm"
                   >
                     <label className="flex items-center gap-2">
@@ -308,13 +334,16 @@ export default function SplitwiseNewExpensePage() {
                         onChange={(e) => {
                           setParticipants((prev) => {
                             const next = new Set(prev);
-                            if (e.target.checked) next.add(m.id);
-                            else next.delete(m.id);
+                            if (e.target.checked) next.add(person.id);
+                            else next.delete(person.id);
                             return next;
                           });
                         }}
                       />
-                      {m.display_name}
+                      {person.display_name}
+                      {person.kind === "guest" && (
+                        <span className="text-xs text-slate-400">({t("group.people.guest")})</span>
+                      )}
                     </label>
                     <span className="tabular-nums text-slate-600 dark:text-slate-300">
                       {active && split
@@ -327,18 +356,18 @@ export default function SplitwiseNewExpensePage() {
             </ul>
           ) : (
             <ul className="mt-2 space-y-2">
-              {group.members.map((m) => (
-                <li key={m.id} className="flex items-center justify-between gap-2">
-                  <label className="text-sm" htmlFor={`exact_${m.id}`}>
-                    {m.display_name}
+              {selectablePeople.map((person) => (
+                <li key={person.id} className="flex items-center justify-between gap-2">
+                  <label className="text-sm" htmlFor={`exact_${person.id}`}>
+                    {person.display_name}
                   </label>
                   <input
-                    id={`exact_${m.id}`}
+                    id={`exact_${person.id}`}
                     inputMode="decimal"
                     className="input w-32 tabular-nums"
-                    value={exactAmounts[m.id] ?? ""}
+                    value={exactAmounts[person.id] ?? ""}
                     onChange={(e) =>
-                      setExactAmounts((prev) => ({ ...prev, [m.id]: e.target.value }))
+                      setExactAmounts((prev) => ({ ...prev, [person.id]: e.target.value }))
                     }
                     placeholder="0.00"
                   />

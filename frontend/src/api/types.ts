@@ -57,6 +57,14 @@ export interface Member {
   joined_at: string;
 }
 
+export interface GroupPerson {
+  id: string;
+  user_id: string | null;
+  display_name: string;
+  kind: "member" | "guest";
+  active: boolean;
+}
+
 export interface GroupDetail {
   id: string;
   name: string;
@@ -66,6 +74,7 @@ export interface GroupDetail {
   created_by: string;
   created_at: string;
   members: Member[];
+  people: GroupPerson[];
   my_role: "owner" | "member";
 }
 

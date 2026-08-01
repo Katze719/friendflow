@@ -15,6 +15,12 @@ pub fn routes() -> Router<AppState> {
         .route("/:id", get(handlers::detail).delete(handlers::delete_group))
         .route("/:id/leave", post(handlers::leave))
         .route("/:id/members/:member_id", delete(handlers::remove_member))
+        .route("/:id/people", post(handlers::create_person))
+        .route(
+            "/:id/people/:person_id",
+            axum::routing::put(handlers::update_person),
+        )
+        .route("/:id/people/:person_id/link", post(handlers::link_person))
         .route("/:id/invite/open", post(handlers::open_invites))
         .route("/:id/invite/close", post(handlers::close_invites))
         // Tool-specific nested routes live under `/:id/<tool>/...`.
