@@ -74,6 +74,10 @@ pub struct JoinRequest {
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct CreatePersonRequest {
+    #[serde(default, rename = "_offline_id")]
+    pub offline_id: Option<Uuid>,
+    #[serde(default)]
+    pub active: Option<bool>,
     #[validate(length(min = 1, max = 80))]
     pub display_name: String,
 }
@@ -569,12 +573,14 @@ pub async fn create_person(
     }
 
     let (id,): (Uuid,) = sqlx::query_as(
-        "INSERT INTO group_people (group_id, display_name, kind, created_by)
-         VALUES ($1, $2, 'guest', $3)
+        "INSERT INTO group_people (id, group_id, display_name, kind, active, created_by)
+         VALUES ($1, $2, $3, 'guest', $4, $5)
          RETURNING id",
     )
+    .bind(payload.offline_id.unwrap_or_else(Uuid::new_v4))
     .bind(group_id)
     .bind(display_name)
+    .bind(payload.active.unwrap_or(true))
     .bind(user.id)
     .fetch_one(&state.db)
     .await?;

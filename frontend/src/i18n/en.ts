@@ -14,6 +14,17 @@ const en = {
     confirm: "Confirm",
     dismiss: "Dismiss",
   },
+  offline: {
+    offline: "Offline",
+    onlineWaiting: "Online · {{count}} changes waiting",
+    syncing: "Syncing",
+    synced: "Everything synced",
+    internetRequired: "An internet connection is required for this.",
+    pending: "Not synced yet",
+    syncingItem: "Syncing",
+    localDraft: "Saved only on this device",
+    deleteDraft: "Delete draft",
+  },
   install: {
     cta: "Install app",
     ios: {

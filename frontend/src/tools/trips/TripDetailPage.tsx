@@ -21,6 +21,7 @@ import OverviewTab from "./OverviewTab";
 import PackingTab from "./PackingTab";
 import { tripsApi } from "./api";
 import { needsTripInfoSetup } from "./tripSetup";
+import OfflineEntityBadge from "../../offline/OfflineEntityBadge";
 
 type TabId = "overview" | "links" | "itinerary" | "packing" | "info";
 
@@ -138,6 +139,9 @@ export default function TripDetailPage() {
         subtitle={`${group.name} - ${t("trips.overview.subtitle")}`}
       />
       <GroupToolSwitcher groupId={group.id} groupName={group.name} />
+      <div className="flex flex-wrap items-center gap-2">
+        <OfflineEntityBadge entity={trip} />
+      </div>
 
       <div
         role="tablist"

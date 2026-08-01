@@ -15,6 +15,7 @@ import {
   setActiveInstance,
   useActiveInstance,
 } from "../lib/instances";
+import { clearCurrentOfflineData } from "../offline/storage";
 
 export default function InstanceSwitcher() {
   const { t } = useTranslation();
@@ -106,6 +107,7 @@ function InstanceSwitcherDialog({
 
     try {
       const cfg = await fetchAuthConfigForBaseUrl(normalized);
+      await clearCurrentOfflineData();
       setActiveInstance({
         kind: "custom",
         label: cfg.instance_name?.trim() || getInstanceDisplayHost(normalized),
@@ -119,7 +121,8 @@ function InstanceSwitcherDialog({
     }
   }
 
-  function useDefaultInstance() {
+  async function switchToDefaultInstance() {
+    await clearCurrentOfflineData();
     resetToDefaultInstance();
     onClose();
   }
@@ -190,7 +193,7 @@ function InstanceSwitcherDialog({
               <button
                 type="button"
                 className={isDefaultInstance(getActiveInstance()) ? "btn-secondary" : "btn-primary"}
-                onClick={useDefaultInstance}
+                onClick={() => void switchToDefaultInstance()}
                 disabled={!hasConfiguredDefaultInstance()}
               >
                 {isDefaultInstance(getActiveInstance())

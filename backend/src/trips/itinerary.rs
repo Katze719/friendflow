@@ -39,6 +39,8 @@ pub struct ItineraryItem {
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct CreateRequest {
+    #[serde(default, rename = "_offline_id")]
+    pub offline_id: Option<Uuid>,
     pub day_date: NaiveDate,
     #[validate(length(min = 1, max = 200))]
     pub title: String,
@@ -135,10 +137,11 @@ pub async fn create(
 
     let id: (Uuid,) = sqlx::query_as(
         "INSERT INTO trip_itinerary_items
-            (trip_id, day_date, title, start_time, end_time, location, note, link_id, position, created_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            (id, trip_id, day_date, title, start_time, end_time, location, note, link_id, position, created_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
          RETURNING id",
     )
+    .bind(payload.offline_id.unwrap_or_else(Uuid::new_v4))
     .bind(trip_id)
     .bind(payload.day_date)
     .bind(payload.title.trim())

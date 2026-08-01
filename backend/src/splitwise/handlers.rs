@@ -97,6 +97,8 @@ pub struct SplitInput {
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct CreateExpenseRequest {
+    #[serde(default, rename = "_offline_id")]
+    pub offline_id: Option<Uuid>,
     #[validate(length(min = 1, max = 200))]
     pub description: String,
     #[validate(range(min = 1))]
@@ -123,6 +125,8 @@ pub struct UpdateExpenseRequest {
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct CreatePaymentRequest {
+    #[serde(default, rename = "_offline_id")]
+    pub offline_id: Option<Uuid>,
     pub from_user: Uuid,
     pub to_user: Uuid,
     #[validate(range(min = 1))]
@@ -653,10 +657,11 @@ pub async fn create_expense(
 
     let mut tx = state.db.begin().await?;
     let exp_id: (Uuid,) = sqlx::query_as(
-        "INSERT INTO expenses (group_id, paid_by, description, amount_cents, happened_at, created_by, trip_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+        "INSERT INTO expenses (id, group_id, paid_by, description, amount_cents, happened_at, created_by, trip_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING id",
     )
+    .bind(payload.offline_id.unwrap_or_else(Uuid::new_v4))
     .bind(group_id)
     .bind(payload.paid_by)
     .bind(payload.description.trim())
@@ -906,10 +911,11 @@ pub async fn create_payment(
 
     let row: (Uuid,) = sqlx::query_as(
         "INSERT INTO splitwise_payments
-            (group_id, from_user, to_user, amount_cents, note, happened_at, created_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+            (id, group_id, from_user, to_user, amount_cents, note, happened_at, created_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING id",
     )
+    .bind(payload.offline_id.unwrap_or_else(Uuid::new_v4))
     .bind(group_id)
     .bind(payload.from_user)
     .bind(payload.to_user)

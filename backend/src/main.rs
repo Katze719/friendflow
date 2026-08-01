@@ -8,6 +8,7 @@ use std::net::SocketAddr;
 
 use axum::{
     http::{HeaderName, HeaderValue},
+    middleware,
     routing::get,
     Router,
 };
@@ -31,6 +32,7 @@ mod error;
 mod games;
 mod google_calendar;
 mod groups;
+mod idempotency;
 mod mail;
 mod shopping;
 mod splitwise;
@@ -84,6 +86,10 @@ async fn serve(cfg: config::Config) -> anyhow::Result<()> {
         .nest("/api/me/calendar", calendar::personal_routes())
         .nest("/api/me/shopping", shopping::personal_routes())
         .nest("/api/me/tasks", tasks::personal_routes())
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            idempotency::deduplicate,
+        ))
         .with_state(state)
         .layer(CompressionLayer::new())
         .layer(TraceLayer::new_for_http())
@@ -151,6 +157,7 @@ fn build_cors(origin: &str) -> CorsLayer {
             axum::http::header::AUTHORIZATION,
             axum::http::header::CONTENT_TYPE,
             HeaderName::from_static("x-friendflow-app-version"),
+            HeaderName::from_static("x-friendflow-operation-id"),
         ])
         .allow_methods([
             axum::http::Method::GET,

@@ -28,6 +28,7 @@ import { useConfirm, useToast } from "../../ui/UIProvider";
 import CashflowGraph from "./CashflowGraph";
 import PaymentDialog from "./PaymentDialog";
 import { splitwiseApi } from "./api";
+import OfflineEntityBadge from "../../offline/OfflineEntityBadge";
 
 type ActivityItem =
   | { kind: "expense"; at: string; data: Expense }
@@ -479,6 +480,7 @@ function ExpenseItem({
           </p>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             {involvementBadge}
+            <OfflineEntityBadge entity={e} />
             {e.trip_id && e.trip_name && (
               <span
                 className="inline-flex items-center rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700 ring-1 ring-brand-200/70 dark:bg-brand-900/30 dark:text-brand-200 dark:ring-brand-800/70"
@@ -579,6 +581,7 @@ function PaymentItem({
               <HandCoins className="h-3.5 w-3.5" />
             </span>
             <span className="break-words">{headline}</span>
+            <OfflineEntityBadge entity={p} />
           </p>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             {formatDateTime(p.happened_at)}

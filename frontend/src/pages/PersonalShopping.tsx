@@ -19,6 +19,7 @@ import {
   shoppingListsApi,
 } from "../tools/shopping/api";
 import { useConfirm, useToast } from "../ui/UIProvider";
+import OfflineEntityBadge from "../offline/OfflineEntityBadge";
 
 const OVERLAY_KEY = "shopping.personal.groupOverlay";
 
@@ -252,6 +253,7 @@ function PersonalListCard({
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <h3 className="truncate text-lg font-semibold">{list.name}</h3>
+            <OfflineEntityBadge entity={list} />
             <ListStatusPill list={list} />
           </div>
           <ShoppingBasket

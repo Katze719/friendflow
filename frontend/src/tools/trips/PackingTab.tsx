@@ -15,6 +15,7 @@ import { useConfirm, useToast } from "../../ui/UIProvider";
 import HelpBanner from "../../components/HelpBanner";
 import LoadingState from "../../components/LoadingState";
 import { tripsApi } from "./api";
+import OfflineEntityBadge from "../../offline/OfflineEntityBadge";
 
 /**
  * Curated list of "usual suspects" for a packing list. Each entry references
@@ -487,6 +488,7 @@ function PackingRow({
               {item.assigned_to_display_name}
             </span>
           )}
+          <OfflineEntityBadge entity={item} />
         </button>
       )}
       {!editing && (

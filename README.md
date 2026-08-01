@@ -37,6 +37,7 @@ shopping lists - and is designed so you can bolt on more as independent modules.
 - [Project layout](#project-layout)
 - [Adding a new tool](#adding-a-new-tool)
 - [Internationalisation](#internationalisation)
+- [Offline use and sync](#offline-use-and-sync)
 - [Security](#security)
 - [Mobile app (Capacitor)](#mobile-app-capacitor)
 - [License](#license)
@@ -67,6 +68,22 @@ shopping lists - and is designed so you can bolt on more as independent modules.
 
 Plus: installable as a PWA on iOS & Android, dark mode, English & German, an
 optional public marketing landing page, and a CLI for bootstrapping admins.
+
+### Offline use and sync
+
+After the first online login, the PWA and native apps keep an encrypted local
+snapshot of the user's personal tools and groups. Existing data remains
+readable without a connection. New calendar events, tasks, shopping data,
+trips, itinerary/packing entries, ledger entries, payments, and external group
+people can be created offline and are uploaded idempotently when the server is
+reachable again. Existing shared server records remain read-only while offline
+to avoid multi-user conflicts.
+
+Local payloads and the upload queue use AES-256-GCM. Native encryption keys are
+kept in iOS Keychain or Android Keystore; browsers use a non-exportable
+WebCrypto key. Logging out or switching server instances removes the local
+replica and its key. The service worker caches only the application shell, not
+API responses.
 
 ## Stack
 

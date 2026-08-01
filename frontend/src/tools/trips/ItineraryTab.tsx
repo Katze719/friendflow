@@ -26,6 +26,7 @@ import { addDays, startOfDay, toDateKey } from "../../lib/date";
 import { formatTime } from "../../lib/format";
 import { calendarApi } from "../calendar/api";
 import { tripsApi } from "./api";
+import OfflineEntityBadge from "../../offline/OfflineEntityBadge";
 
 /**
  * Unified list entry: either a real itinerary item or a calendar event that
@@ -434,7 +435,10 @@ function ItineraryCard({
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <h4 className="font-semibold leading-tight">{item.title}</h4>
+          <div className="flex flex-wrap items-center gap-2">
+            <h4 className="font-semibold leading-tight">{item.title}</h4>
+            <OfflineEntityBadge entity={item} />
+          </div>
           {item.location && (
             <p className="mt-0.5 inline-flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
               <MapPin className="h-3 w-3" />

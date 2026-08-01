@@ -6,6 +6,17 @@ import type {
   TripLink,
   TripPackingItem,
 } from "../../api/types";
+import { currentOfflineUser, getCachedResponse, removePendingCreate, updatePendingCreate } from "../../offline/storage";
+import { getConnectionState } from "../../offline/networkState";
+
+async function offlineEmpty<T>(promise: Promise<T[]>): Promise<T[]> {
+  try {
+    return await promise;
+  } catch (error) {
+    if (getConnectionState() === "offline") return [];
+    throw error;
+  }
+}
 
 export type CreateTripPayload = {
   name: string;
@@ -83,21 +94,58 @@ export const tripsApi = {
   // --- Trips (collection) ---------------------------------------------
   listTrips: (groupId: string) => api<Trip[]>(base(groupId)),
 
-  createTrip: (groupId: string, payload: CreateTripPayload) =>
-    api<Trip>(base(groupId), { method: "POST", body: payload }),
+  createTrip: (groupId: string, payload: CreateTripPayload) => {
+    const user = currentOfflineUser();
+    const now = new Date().toISOString();
+    return api<Trip>(base(groupId), {
+      method: "POST",
+      body: payload,
+      offlineCreate: {
+        optimistic: {
+          id: crypto.randomUUID(),
+          group_id: groupId,
+          name: payload.name.trim(),
+          start_date: payload.start_date ?? null,
+          end_date: payload.end_date ?? null,
+          destinations: payload.destinations ?? [],
+          budget_cents: payload.budget_cents ?? null,
+          spent_cents: 0,
+          position: 0,
+          created_by: user?.id ?? "",
+          created_by_display_name: user?.display_name ?? "",
+          created_at: now,
+          updated_at: now,
+        },
+        cachePath: base(groupId),
+      },
+    });
+  },
 
-  getTrip: (groupId: string, tripId: string) =>
-    api<Trip>(base(groupId, tripId)),
+  getTrip: async (groupId: string, tripId: string) => {
+    try {
+      return await api<Trip>(base(groupId, tripId));
+    } catch (error) {
+      const trips = await getCachedResponse<Trip[]>(base(groupId));
+      const local = trips?.find((trip) => trip.id === tripId);
+      if (local) return local;
+      throw error;
+    }
+  },
 
-  updateTrip: (groupId: string, tripId: string, payload: UpdateTripPayload) =>
-    api<Trip>(base(groupId, tripId), { method: "PATCH", body: payload }),
+  updateTrip: async (groupId: string, tripId: string, payload: UpdateTripPayload) => {
+    const pending = await updatePendingCreate<Trip>(tripId, payload);
+    if (pending) return pending;
+    return api<Trip>(base(groupId, tripId), { method: "PATCH", body: payload });
+  },
 
-  deleteTrip: (groupId: string, tripId: string) =>
-    api<{ ok: boolean }>(base(groupId, tripId), { method: "DELETE" }),
+  deleteTrip: async (groupId: string, tripId: string) => {
+    if (await removePendingCreate(tripId)) return { ok: true };
+    return api<{ ok: boolean }>(base(groupId, tripId), { method: "DELETE" });
+  },
 
   // --- Links ----------------------------------------------------------
   listLinks: (groupId: string, tripId: string) =>
-    api<TripLink[]>(`${base(groupId, tripId)}/links`),
+    offlineEmpty(api<TripLink[]>(`${base(groupId, tripId)}/links`)),
 
   createLink: (groupId: string, tripId: string, payload: CreateLinkPayload) =>
     api<TripLink>(`${base(groupId, tripId)}/links`, {
@@ -161,7 +209,7 @@ export const tripsApi = {
 
   // --- Folders --------------------------------------------------------
   listFolders: (groupId: string, tripId: string) =>
-    api<TripFolder[]>(`${base(groupId, tripId)}/folders`),
+    offlineEmpty(api<TripFolder[]>(`${base(groupId, tripId)}/folders`)),
 
   createFolder: (groupId: string, tripId: string, name: string) =>
     api<TripFolder>(`${base(groupId, tripId)}/folders`, {
@@ -187,28 +235,41 @@ export const tripsApi = {
 
   // --- Packing list ---------------------------------------------------
   listPacking: (groupId: string, tripId: string) =>
-    api<TripPackingItem[]>(`${base(groupId, tripId)}/packing`),
+    offlineEmpty(api<TripPackingItem[]>(`${base(groupId, tripId)}/packing`)),
 
   createPacking: (
     groupId: string,
     tripId: string,
     payload: CreatePackingPayload,
-  ) =>
-    api<TripPackingItem>(`${base(groupId, tripId)}/packing`, {
+  ) => {
+    const user = currentOfflineUser();
+    const now = new Date().toISOString();
+    return api<TripPackingItem>(`${base(groupId, tripId)}/packing`, {
       method: "POST",
       body: payload,
-    }),
+      offlineCreate: {
+        optimistic: {
+          id: crypto.randomUUID(), trip_id: tripId, name: payload.name.trim(),
+          quantity: payload.quantity?.trim() ?? "", category: payload.category?.trim() ?? "",
+          is_packed: false, assigned_to: payload.assigned_to ?? null,
+          assigned_to_display_name: null, position: 0, created_by: user?.id ?? "",
+          created_by_display_name: user?.display_name ?? "", created_at: now, updated_at: now,
+        },
+        cachePath: `${base(groupId, tripId)}/packing`,
+      },
+    });
+  },
 
   updatePacking: (
     groupId: string,
     tripId: string,
     itemId: string,
     payload: UpdatePackingPayload,
-  ) =>
+  ) => updatePendingCreate<TripPackingItem>(itemId, payload).then((pending) => pending ??
     api<TripPackingItem>(`${base(groupId, tripId)}/packing/${itemId}`, {
       method: "PATCH",
       body: payload,
-    }),
+    })),
 
   togglePacking: (groupId: string, tripId: string, itemId: string) =>
     api<TripPackingItem>(
@@ -216,10 +277,12 @@ export const tripsApi = {
       { method: "POST" },
     ),
 
-  deletePacking: (groupId: string, tripId: string, itemId: string) =>
-    api<{ ok: boolean }>(`${base(groupId, tripId)}/packing/${itemId}`, {
+  deletePacking: async (groupId: string, tripId: string, itemId: string) => {
+    if (await removePendingCreate(itemId)) return { ok: true };
+    return api<{ ok: boolean }>(`${base(groupId, tripId)}/packing/${itemId}`, {
       method: "DELETE",
-    }),
+    });
+  },
 
   reorderPacking: (groupId: string, tripId: string, ids: string[]) =>
     api<TripPackingItem[]>(`${base(groupId, tripId)}/packing/reorder`, {
@@ -229,33 +292,49 @@ export const tripsApi = {
 
   // --- Itinerary ------------------------------------------------------
   listItinerary: (groupId: string, tripId: string) =>
-    api<TripItineraryItem[]>(`${base(groupId, tripId)}/itinerary`),
+    offlineEmpty(api<TripItineraryItem[]>(`${base(groupId, tripId)}/itinerary`)),
 
   createItinerary: (
     groupId: string,
     tripId: string,
     payload: CreateItineraryPayload,
-  ) =>
-    api<TripItineraryItem>(`${base(groupId, tripId)}/itinerary`, {
+  ) => {
+    const user = currentOfflineUser();
+    const now = new Date().toISOString();
+    return api<TripItineraryItem>(`${base(groupId, tripId)}/itinerary`, {
       method: "POST",
       body: payload,
-    }),
+      offlineCreate: {
+        optimistic: {
+          id: crypto.randomUUID(), trip_id: tripId, day_date: payload.day_date,
+          title: payload.title.trim(), start_time: payload.start_time ?? null,
+          end_time: payload.end_time ?? null, location: payload.location?.trim() ?? "",
+          note: payload.note?.trim() ?? "", link_id: payload.link_id ?? null,
+          link_title: null, link_url: null, position: 0, created_by: user?.id ?? "",
+          created_by_display_name: user?.display_name ?? "", created_at: now, updated_at: now,
+        },
+        cachePath: `${base(groupId, tripId)}/itinerary`,
+      },
+    });
+  },
 
   updateItinerary: (
     groupId: string,
     tripId: string,
     itemId: string,
     payload: UpdateItineraryPayload,
-  ) =>
+  ) => updatePendingCreate<TripItineraryItem>(itemId, payload).then((pending) => pending ??
     api<TripItineraryItem>(`${base(groupId, tripId)}/itinerary/${itemId}`, {
       method: "PATCH",
       body: payload,
-    }),
+    })),
 
-  deleteItinerary: (groupId: string, tripId: string, itemId: string) =>
-    api<{ ok: boolean }>(`${base(groupId, tripId)}/itinerary/${itemId}`, {
+  deleteItinerary: async (groupId: string, tripId: string, itemId: string) => {
+    if (await removePendingCreate(itemId)) return { ok: true };
+    return api<{ ok: boolean }>(`${base(groupId, tripId)}/itinerary/${itemId}`, {
       method: "DELETE",
-    }),
+    });
+  },
 
   reorderItinerary: (
     groupId: string,

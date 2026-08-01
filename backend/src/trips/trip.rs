@@ -51,6 +51,8 @@ pub struct Trip {
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct CreateTripRequest {
+    #[serde(default, rename = "_offline_id")]
+    pub offline_id: Option<Uuid>,
     #[validate(length(min = 1, max = 120))]
     pub name: String,
     #[serde(default)]
@@ -168,10 +170,11 @@ pub async fn create(
             .await?;
 
     let id: (Uuid,) = sqlx::query_as(
-        "INSERT INTO trips (group_id, name, start_date, end_date, destinations, budget_cents, position, created_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        "INSERT INTO trips (id, group_id, name, start_date, end_date, destinations, budget_cents, position, created_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          RETURNING id",
     )
+    .bind(payload.offline_id.unwrap_or_else(Uuid::new_v4))
     .bind(group_id)
     .bind(payload.name.trim())
     .bind(payload.start_date)

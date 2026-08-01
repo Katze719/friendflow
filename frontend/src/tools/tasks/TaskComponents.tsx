@@ -12,6 +12,10 @@ import { ApiError } from "../../api/client";
 import type { GroupDetail, Task, TaskPriority } from "../../api/types";
 import { formatDate } from "../../lib/format";
 import { useConfirm, useToast } from "../../ui/UIProvider";
+import OfflineEntityBadge from "../../offline/OfflineEntityBadge";
+import { useOfflineSync } from "../../offline/SyncProvider";
+import { useLocalEntityMeta } from "../../offline/useLocalEntityMeta";
+import { emitOnlineRequired } from "../../offline/onlineRequiredEvents";
 import type { CreateTaskPayload, UpdateTaskPayload } from "./api";
 
 /** Scope-agnostic task operations. Group pages bind this to
@@ -189,6 +193,9 @@ export function TaskRow({
   const { t } = useTranslation();
   const confirm = useConfirm();
   const toast = useToast();
+  const { connection } = useOfflineSync();
+  const localMeta = useLocalEntityMeta(task.id, task);
+  const isLocal = !!localMeta.local_sync_state;
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
 
@@ -252,7 +259,10 @@ export function TaskRow({
     <li className="flex items-start gap-3 p-3 sm:p-4">
       <button
         type="button"
-        onClick={onToggle}
+        onClick={() => {
+          if (connection === "offline") return emitOnlineRequired();
+          onToggle();
+        }}
         disabled={busy}
         aria-pressed={task.is_done}
         aria-label={
@@ -288,6 +298,7 @@ export function TaskRow({
           {task.assigned_to_display_name && (
             <AssigneeChip name={task.assigned_to_display_name} />
           )}
+          <OfflineEntityBadge entity={task} />
         </div>
         {task.description && (
           <p
@@ -312,7 +323,10 @@ export function TaskRow({
         <button
           type="button"
           className="btn-ghost -my-1"
-          onClick={() => setEditing(true)}
+          onClick={() => {
+            if (connection === "offline" && !isLocal) return emitOnlineRequired();
+            setEditing(true);
+          }}
           aria-label={t("common.edit")}
           title={t("common.edit")}
           disabled={busy}
@@ -322,7 +336,10 @@ export function TaskRow({
         <button
           type="button"
           className="btn-ghost -my-1 text-slate-400 hover:text-rose-600 dark:text-slate-500 dark:hover:text-rose-400"
-          onClick={onDelete}
+          onClick={() => {
+            if (connection === "offline" && !isLocal) return emitOnlineRequired();
+            onDelete();
+          }}
           aria-label={t("common.delete")}
           title={t("common.delete")}
           disabled={busy}

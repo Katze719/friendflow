@@ -5,11 +5,18 @@ import {
   useMemo,
   useRef,
   useState,
+  useEffect,
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
 import ConfirmDialog, { type ConfirmOptions } from "./ConfirmDialog";
 import ToastContainer, { type ToastData, type ToastVariant } from "./Toast";
+import AlertDialog from "./AlertDialog";
+import i18n from "../i18n";
+import {
+  subscribeOnlineRequired,
+  wasOnlineRequiredJustEmitted,
+} from "../offline/onlineRequiredEvents";
 
 type ConfirmFn = (opts: ConfirmOptions) => Promise<boolean>;
 
@@ -38,8 +45,11 @@ interface PendingConfirm extends ConfirmOptions {
 
 export function UIProvider({ children }: { children: ReactNode }) {
   const [pending, setPending] = useState<PendingConfirm | null>(null);
+  const [onlineRequiredOpen, setOnlineRequiredOpen] = useState(false);
   const [toasts, setToasts] = useState<ToastData[]>([]);
   const nextIdRef = useRef(1);
+
+  useEffect(() => subscribeOnlineRequired(() => setOnlineRequiredOpen(true)), []);
 
   const confirm = useCallback<ConfirmFn>((opts) => {
     return new Promise<boolean>((resolve) => {
@@ -66,6 +76,7 @@ export function UIProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const show = useCallback<ShowToast>((message, variant = "info", duration) => {
+    if (message === i18n.t("offline.internetRequired") && wasOnlineRequiredJustEmitted()) return;
     const id = nextIdRef.current++;
     setToasts((current) => [...current, { id, message, variant, duration }]);
   }, []);
@@ -103,6 +114,12 @@ export function UIProvider({ children }: { children: ReactNode }) {
               variant={pending?.variant ?? "default"}
               onConfirm={handleConfirm}
               onCancel={handleCancel}
+            />
+            <AlertDialog
+              open={onlineRequiredOpen}
+              title={i18n.t("offline.offline")}
+              message={i18n.t("offline.internetRequired")}
+              onClose={() => setOnlineRequiredOpen(false)}
             />
             <ToastContainer toasts={toasts} onDismiss={dismiss} />
           </>,

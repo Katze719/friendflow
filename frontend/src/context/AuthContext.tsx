@@ -15,6 +15,8 @@ import {
   useActiveInstance,
   writeInstanceStorage,
 } from "../lib/instances";
+import { clearCurrentOfflineData } from "../offline/storage";
+import { ApiError } from "../api/client";
 
 interface AuthContextValue {
   user: User | null;
@@ -112,8 +114,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(u);
         writeCachedUser(u);
       })
-      .catch(() => {
+      .catch((error) => {
         if (cancelled) return;
+        if (!(error instanceof ApiError) || error.status === 0 || error.status >= 500) {
+          return;
+        }
         setToken(null);
         setUser(null);
         clearAuthCaches();
@@ -155,6 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(() => {
+    void clearCurrentOfflineData();
     setToken(null);
     clearAuthCaches();
     setUser(null);

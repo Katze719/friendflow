@@ -10,6 +10,7 @@ import InstallAppButton from "./InstallAppButton";
 import LanguageSwitcher from "./LanguageSwitcher";
 import MobileBottomNav from "./MobileBottomNav";
 import ThemeSwitcher from "./ThemeSwitcher";
+import { SyncStatusIndicator } from "../offline/SyncProvider";
 
 const PENDING_POLL_MS = 60_000;
 
@@ -104,10 +105,12 @@ export default function Layout({ children }: { children: ReactNode }) {
               </Link>
             )}
           </div>
-          <div
-            data-testid="header-actions"
-            className="hidden min-w-0 shrink-0 items-center gap-3 sm:flex"
-          >
+          <div className="flex min-w-0 shrink-0 items-center gap-2">
+            {user && <SyncStatusIndicator />}
+            <div
+              data-testid="header-actions"
+              className="hidden min-w-0 shrink-0 items-center gap-3 sm:flex"
+            >
             <InstallAppButton
               variant="ghost"
               className="h-10 w-10 shrink-0 p-0 [&>span]:hidden sm:h-auto sm:w-auto sm:px-4 sm:py-2 sm:[&>span]:inline"
@@ -173,6 +176,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                 </button>
               </>
             )}
+            </div>
           </div>
         </div>
       </header>

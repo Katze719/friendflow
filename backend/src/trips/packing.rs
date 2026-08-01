@@ -34,6 +34,8 @@ pub struct PackingItem {
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct CreateRequest {
+    #[serde(default, rename = "_offline_id")]
+    pub offline_id: Option<Uuid>,
     #[validate(length(min = 1, max = 200))]
     pub name: String,
     #[validate(length(max = 80))]
@@ -108,10 +110,11 @@ pub async fn create(
 
     let id: (Uuid,) = sqlx::query_as(
         "INSERT INTO trip_packing_items
-            (trip_id, name, quantity, category, assigned_to, position, created_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+            (id, trip_id, name, quantity, category, assigned_to, position, created_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING id",
     )
+    .bind(payload.offline_id.unwrap_or_else(Uuid::new_v4))
     .bind(trip_id)
     .bind(payload.name.trim())
     .bind(payload.quantity.trim())

@@ -1,5 +1,6 @@
 import { api } from "../../api/client";
 import type { CalendarCategory, CalendarEvent } from "../../api/types";
+import { currentOfflineUser, removePendingCreate, updatePendingCreate } from "../../offline/storage";
 
 export interface CreateEventPayload {
   title: string;
@@ -58,15 +59,45 @@ function categoriesBase(scope: CalendarScope): string {
 
 export const calendarApi = {
   listEvents: (scope: CalendarScope) => api<CalendarEvent[]>(eventsBase(scope)),
-  createEvent: (scope: CalendarScope, body: CreateEventPayload) =>
-    api<CalendarEvent>(eventsBase(scope), { method: "POST", body }),
-  updateEvent: (scope: CalendarScope, eventId: string, body: UpdateEventPayload) =>
-    api<CalendarEvent>(`${eventsBase(scope)}/${eventId}`, {
+  createEvent: (scope: CalendarScope, body: CreateEventPayload) => {
+    const user = currentOfflineUser();
+    const now = new Date().toISOString();
+    return api<CalendarEvent>(eventsBase(scope), {
+      method: "POST",
+      body,
+      offlineCreate: {
+        optimistic: {
+          id: crypto.randomUUID(),
+          group_id: scope.kind === "group" ? scope.groupId : null,
+          owner_user_id: scope.kind === "personal" ? user?.id ?? null : null,
+          title: body.title.trim(),
+          description: body.description?.trim() ?? "",
+          location: body.location?.trim() ?? "",
+          starts_at: body.starts_at,
+          ends_at: body.ends_at ?? null,
+          all_day: body.all_day ?? false,
+          category: null,
+          created_by: user?.id ?? "",
+          created_by_display_name: user?.display_name ?? "",
+          created_at: now,
+          updated_at: now,
+        },
+        cachePath: eventsBase(scope),
+      },
+    });
+  },
+  updateEvent: async (scope: CalendarScope, eventId: string, body: UpdateEventPayload) => {
+    const pending = await updatePendingCreate<CalendarEvent>(eventId, body);
+    if (pending) return pending;
+    return api<CalendarEvent>(`${eventsBase(scope)}/${eventId}`, {
       method: "PATCH",
       body,
-    }),
-  removeEvent: (scope: CalendarScope, eventId: string) =>
-    api<{ ok: true }>(`${eventsBase(scope)}/${eventId}`, { method: "DELETE" }),
+    });
+  },
+  removeEvent: async (scope: CalendarScope, eventId: string) => {
+    if (await removePendingCreate(eventId)) return { ok: true as const };
+    return api<{ ok: true }>(`${eventsBase(scope)}/${eventId}`, { method: "DELETE" });
+  },
 
   listCategories: (scope: CalendarScope) =>
     api<CalendarCategory[]>(categoriesBase(scope)),

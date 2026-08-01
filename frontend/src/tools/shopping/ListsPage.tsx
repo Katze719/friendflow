@@ -16,6 +16,7 @@ import GroupToolSwitcher from "../../components/GroupToolSwitcher";
 import PageHeader from "../../components/PageHeader";
 import { useConfirm, useToast } from "../../ui/UIProvider";
 import { shoppingListsApi } from "./api";
+import OfflineEntityBadge from "../../offline/OfflineEntityBadge";
 
 /**
  * Landing page for the shopping tool: shows every list the group owns as
@@ -167,6 +168,7 @@ function ListCard({
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <h3 className="truncate text-lg font-semibold">{list.name}</h3>
+            <OfflineEntityBadge entity={list} />
             <ListStatusPill list={list} />
           </div>
           <ShoppingBasket

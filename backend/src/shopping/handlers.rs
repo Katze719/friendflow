@@ -65,6 +65,8 @@ pub struct ShoppingList {
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct CreateListRequest {
+    #[serde(default, rename = "_offline_id")]
+    pub offline_id: Option<Uuid>,
     #[validate(length(min = 1, max = 120))]
     pub name: String,
 }
@@ -168,10 +170,11 @@ async fn create_list(
     let (group_id, owner_user_id) = split_scope(scope);
 
     let id: (Uuid,) = sqlx::query_as(
-        "INSERT INTO shopping_lists (group_id, owner_user_id, name, created_by)
-         VALUES ($1, $2, $3, $4)
+        "INSERT INTO shopping_lists (id, group_id, owner_user_id, name, created_by)
+         VALUES ($1, $2, $3, $4, $5)
          RETURNING id",
     )
+    .bind(payload.offline_id.unwrap_or_else(Uuid::new_v4))
     .bind(group_id)
     .bind(owner_user_id)
     .bind(payload.name.trim())
@@ -278,6 +281,8 @@ pub struct ShoppingItem {
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct CreateItemRequest {
+    #[serde(default, rename = "_offline_id")]
+    pub offline_id: Option<Uuid>,
     #[validate(length(min = 1, max = 200))]
     pub name: String,
     #[validate(length(max = 80))]
@@ -455,10 +460,11 @@ async fn create_item(
 
     let id: (Uuid,) = sqlx::query_as(
         "INSERT INTO shopping_items
-            (group_id, owner_user_id, list_id, added_by, name, quantity, note)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+            (id, group_id, owner_user_id, list_id, added_by, name, quantity, note)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING id",
     )
+    .bind(payload.offline_id.unwrap_or_else(Uuid::new_v4))
     .bind(group_id)
     .bind(owner_user_id)
     .bind(list_id)

@@ -15,6 +15,10 @@ import { useTranslation } from "react-i18next";
 import { ApiError } from "../../api/client";
 import type { ShoppingItem, ShoppingList } from "../../api/types";
 import { useConfirm, useToast } from "../../ui/UIProvider";
+import OfflineEntityBadge from "../../offline/OfflineEntityBadge";
+import { useOfflineSync } from "../../offline/SyncProvider";
+import { useLocalEntityMeta } from "../../offline/useLocalEntityMeta";
+import { emitOnlineRequired } from "../../offline/onlineRequiredEvents";
 import type {
   CreateItemPayload,
   RenameListPayload,
@@ -160,6 +164,8 @@ export default function ShoppingListView({
   onListRemoved,
 }: ShoppingListViewProps) {
   const { t } = useTranslation();
+  const { connection } = useOfflineSync();
+  const listLocalMeta = useLocalEntityMeta(list.id, list);
   const confirm = useConfirm();
   const toast = useToast();
   const [clearing, setClearing] = useState(false);
@@ -291,10 +297,14 @@ export default function ShoppingListView({
                   <h1 className="truncate text-2xl font-semibold tracking-tight sm:text-3xl">
                     {list.name}
                   </h1>
+                  <OfflineEntityBadge entity={list} />
                   <button
                     type="button"
                     className="btn-ghost -my-1"
                     onClick={() => {
+                      if (connection === "offline" && !listLocalMeta.local_sync_state) {
+                        return emitOnlineRequired();
+                      }
                       setRenameValue(list.name);
                       setRenaming(true);
                     }}
@@ -618,6 +628,9 @@ function ItemRow({
   const { t } = useTranslation();
   const confirm = useConfirm();
   const toast = useToast();
+  const { connection } = useOfflineSync();
+  const localMeta = useLocalEntityMeta(item.id, item);
+  const isLocal = !!localMeta.local_sync_state;
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(item.name);
@@ -755,7 +768,10 @@ function ItemRow({
     <li className="flex items-center gap-3 p-3 sm:p-4">
       <button
         type="button"
-        onClick={onToggle}
+        onClick={() => {
+          if (connection === "offline") return emitOnlineRequired();
+          onToggle();
+        }}
         disabled={busy}
         aria-pressed={item.is_done}
         aria-label={
@@ -793,6 +809,7 @@ function ItemRow({
               {item.quantity}
             </span>
           )}
+          <OfflineEntityBadge entity={item} />
         </div>
         {item.note && (
           <p
@@ -819,7 +836,10 @@ function ItemRow({
         <button
           type="button"
           className="btn-ghost -my-1"
-          onClick={() => setEditing(true)}
+          onClick={() => {
+            if (connection === "offline" && !isLocal) return emitOnlineRequired();
+            setEditing(true);
+          }}
           aria-label={t("common.edit")}
           title={t("common.edit")}
           disabled={busy}
@@ -829,7 +849,10 @@ function ItemRow({
         <button
           type="button"
           className="btn-ghost -my-1 text-slate-400 hover:text-rose-600 dark:text-slate-500 dark:hover:text-rose-400"
-          onClick={onDelete}
+          onClick={() => {
+            if (connection === "offline" && !isLocal) return emitOnlineRequired();
+            onDelete();
+          }}
           aria-label={t("common.delete")}
           title={t("common.delete")}
           disabled={busy}

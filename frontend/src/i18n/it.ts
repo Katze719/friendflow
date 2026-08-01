@@ -16,6 +16,17 @@ const it: Translations = {
     "confirm": "Conferma",
     "dismiss": "Chiudi"
   },
+  "offline": {
+    "offline": "Offline",
+    "onlineWaiting": "Online · {{count}} modifiche in attesa",
+    "syncing": "Sincronizzazione",
+    "synced": "Tutto sincronizzato",
+    "internetRequired": "Per questa azione è necessaria una connessione Internet.",
+    "pending": "Non ancora sincronizzato",
+    "syncingItem": "Sincronizzazione",
+    "localDraft": "Salvato solo su questo dispositivo",
+    "deleteDraft": "Elimina bozza"
+  },
   "install": {
     "cta": "Installare app",
     "ios": {

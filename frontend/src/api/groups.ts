@@ -1,5 +1,6 @@
 import { api } from "./client";
 import type { GroupDetail, GroupPerson, GroupSummary } from "./types";
+import { currentOfflineUser, updatePendingCreate } from "../offline/storage";
 
 export const groupsApi = {
   list: () => api<GroupSummary[]>("/api/groups"),
@@ -25,20 +26,35 @@ export const groupsApi = {
     api<{ ok: boolean }>(`/api/groups/${id}/members/${memberId}`, {
       method: "DELETE",
     }),
-  createPerson: (id: string, displayName: string) =>
-    api<GroupPerson>(`/api/groups/${id}/people`, {
+  createPerson: (id: string, displayName: string) => {
+    const user = currentOfflineUser();
+    const personId = crypto.randomUUID();
+    return api<GroupPerson>(`/api/groups/${id}/people`, {
       method: "POST",
       body: { display_name: displayName },
-    }),
+      offlineCreate: {
+        optimistic: {
+          id: personId,
+          user_id: null,
+          display_name: displayName.trim(),
+          kind: "guest",
+          active: true,
+          created_by: user?.id ?? "",
+        },
+        cachePath: `/api/groups/${id}`,
+        cacheField: "people",
+      },
+    });
+  },
   updatePerson: (
     id: string,
     personId: string,
     payload: { display_name: string; active: boolean },
-  ) =>
+  ) => updatePendingCreate<GroupPerson>(personId, payload).then((pending) => pending ??
     api<GroupPerson>(`/api/groups/${id}/people/${personId}`, {
       method: "PUT",
       body: payload,
-    }),
+    })),
   linkPerson: (id: string, personId: string, userId: string) =>
     api<{ ok: boolean; person_id: string }>(
       `/api/groups/${id}/people/${personId}/link`,

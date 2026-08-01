@@ -3,6 +3,7 @@ import { Capacitor, type PluginListenerHandle } from "@capacitor/core";
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { resetToDefaultInstance } from "../lib/instances";
+import { clearCurrentOfflineData } from "../offline/storage";
 import { friendflowRouterTarget } from "../lib/nativeLinks";
 
 export default function NativeUrlNavigation() {
@@ -32,8 +33,9 @@ export default function NativeUrlNavigation() {
       // again later must still navigate.
       lastHandledUrl.current = { url: rawUrl, at: now };
       // Incoming official links always belong to the official/default
-      // instance. Per-instance tokens and caches remain stored.
-      resetToDefaultInstance();
+      // instance. Offline data from the previous instance is removed before
+      // switching so encrypted replicas never linger across instances.
+      void clearCurrentOfflineData().then(() => resetToDefaultInstance());
       navigate(target, { replace: true });
     };
 

@@ -30,6 +30,7 @@ import { buildPublicAppUrl } from "../lib/instances";
 import { toolPath, tools } from "../tools";
 import { useFavoriteTools } from "../tools/useFavoriteTools";
 import { useConfirm, useToast } from "../ui/UIProvider";
+import OfflineEntityBadge from "../offline/OfflineEntityBadge";
 
 export default function GroupHome() {
   const { t } = useTranslation();
@@ -420,6 +421,7 @@ export default function GroupHome() {
                     <div>
                       <span className={person.active ? "font-medium" : "font-medium text-slate-400 line-through"}>
                         {person.display_name}
+                        <OfflineEntityBadge entity={person} />
                       </span>
                       {!person.active && (
                         <span className="ml-2 text-xs text-slate-400">{t("group.people.archived")}</span>

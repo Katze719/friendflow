@@ -57,7 +57,7 @@ export interface Member {
   joined_at: string;
 }
 
-export interface GroupPerson {
+export interface GroupPerson extends OfflineEntityMeta {
   id: string;
   user_id: string | null;
   display_name: string;
@@ -108,7 +108,7 @@ export interface ExpenseSplit {
   amount_cents: number;
 }
 
-export interface Expense {
+export interface Expense extends OfflineEntityMeta {
   id: string;
   group_id: string;
   paid_by: string;
@@ -124,7 +124,7 @@ export interface Expense {
   splits: ExpenseSplit[];
 }
 
-export interface Payment {
+export interface Payment extends OfflineEntityMeta {
   id: string;
   group_id: string;
   from_user_id: string;
@@ -148,7 +148,7 @@ export interface TripDestination {
  * links, folders, packing items, and itinerary items all scope to a
  * specific trip id.
  */
-export interface Trip {
+export interface Trip extends OfflineEntityMeta {
   id: string;
   group_id: string;
   name: string;
@@ -202,7 +202,7 @@ export interface TripFolder {
   link_count: number;
 }
 
-export interface TripPackingItem {
+export interface TripPackingItem extends OfflineEntityMeta {
   id: string;
   trip_id: string;
   name: string;
@@ -218,7 +218,7 @@ export interface TripPackingItem {
   updated_at: string;
 }
 
-export interface TripItineraryItem {
+export interface TripItineraryItem extends OfflineEntityMeta {
   id: string;
   trip_id: string;
   /** ISO date (YYYY-MM-DD) */
@@ -239,7 +239,7 @@ export interface TripItineraryItem {
   updated_at: string;
 }
 
-export interface CalendarEvent {
+export interface CalendarEvent extends OfflineEntityMeta {
   id: string;
   /** Present only for group-owned events. */
   group_id: string | null;
@@ -270,7 +270,7 @@ export interface CalendarCategory extends CalendarCategoryRef {
   created_at: string;
 }
 
-export interface ShoppingList {
+export interface ShoppingList extends OfflineEntityMeta {
   id: string;
   /** Present only for group-owned lists. */
   group_id: string | null;
@@ -285,7 +285,7 @@ export interface ShoppingList {
   created_at: string;
 }
 
-export interface ShoppingItem {
+export interface ShoppingItem extends OfflineEntityMeta {
   id: string;
   /** Present only for items on group-owned lists. */
   group_id: string | null;
@@ -307,7 +307,7 @@ export interface ShoppingItem {
 
 export type TaskPriority = "low" | "normal" | "high";
 
-export interface Task {
+export interface Task extends OfflineEntityMeta {
   id: string;
   /** Present only for group tasks (shared with the group). */
   group_id: string | null;
@@ -421,3 +421,4 @@ export interface AdminUserRow {
   approved_at: string | null;
   created_at: string;
 }
+import type { OfflineEntityMeta } from "../offline/storage";

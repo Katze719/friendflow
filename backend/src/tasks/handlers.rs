@@ -67,6 +67,8 @@ pub struct Task {
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct CreateTaskRequest {
+    #[serde(default, rename = "_offline_id")]
+    pub offline_id: Option<Uuid>,
     #[validate(length(min = 1, max = 200))]
     pub title: String,
     #[validate(length(max = 2000))]
@@ -297,11 +299,12 @@ async fn create_task(
 
     let id: (Uuid,) = sqlx::query_as(
         "INSERT INTO tasks
-            (group_id, owner_user_id, title, description, assigned_to,
+            (id, group_id, owner_user_id, title, description, assigned_to,
              due_date, priority, created_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          RETURNING id",
     )
+    .bind(payload.offline_id.unwrap_or_else(Uuid::new_v4))
     .bind(group_id)
     .bind(owner_user_id)
     .bind(payload.title.trim())

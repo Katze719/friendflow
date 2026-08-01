@@ -38,6 +38,10 @@ import {
 } from "../../lib/date";
 import { formatDateTime, formatTime } from "../../lib/format";
 import { useConfirm, useToast } from "../../ui/UIProvider";
+import OfflineEntityBadge from "../../offline/OfflineEntityBadge";
+import { useOfflineSync } from "../../offline/SyncProvider";
+import { useLocalEntityMeta } from "../../offline/useLocalEntityMeta";
+import { emitOnlineRequired } from "../../offline/onlineRequiredEvents";
 import {
   calendarApi,
   CATEGORY_PALETTE,
@@ -892,6 +896,9 @@ function EventCard({
   const { t } = useTranslation();
   const confirm = useConfirm();
   const toast = useToast();
+  const { connection } = useOfflineSync();
+  const localMeta = useLocalEntityMeta(event.id, event);
+  const isLocal = !!localMeta.local_sync_state;
   const [busy, setBusy] = useState(false);
   const personal = isPersonalEvent(event);
   const crossScope = isCrossScope(event, pageScope);
@@ -999,6 +1006,7 @@ function EventCard({
                 {t("calendar.overview.fromGroup", { name: groupName })}
               </span>
             )}
+            <OfflineEntityBadge entity={event} />
           </div>
           <h3 className="mt-1 break-words text-base font-semibold">
             {event.title}
@@ -1035,7 +1043,10 @@ function EventCard({
               <button
                 type="button"
                 className="btn-ghost -my-1"
-                onClick={onEdit}
+                onClick={() => {
+                  if (connection === "offline" && !isLocal) return emitOnlineRequired();
+                  onEdit();
+                }}
                 aria-label={t("common.edit")}
                 title={t("common.edit")}
                 disabled={busy}
@@ -1045,7 +1056,10 @@ function EventCard({
               <button
                 type="button"
                 className="btn-ghost -my-1 text-slate-400 hover:text-rose-600 dark:text-slate-500 dark:hover:text-rose-400"
-                onClick={onDelete}
+                onClick={() => {
+                  if (connection === "offline" && !isLocal) return emitOnlineRequired();
+                  onDelete();
+                }}
                 aria-label={t("common.delete")}
                 title={t("common.delete")}
                 disabled={busy}

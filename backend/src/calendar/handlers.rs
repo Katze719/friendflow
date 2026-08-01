@@ -90,6 +90,8 @@ pub struct CategoryRef {
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct CreateEventRequest {
+    #[serde(default, rename = "_offline_id")]
+    pub offline_id: Option<Uuid>,
     #[validate(length(min = 1, max = 200))]
     pub title: String,
     #[validate(length(max = 2000))]
@@ -249,11 +251,12 @@ async fn create_event(
 
     let id: (Uuid,) = sqlx::query_as(
         "INSERT INTO calendar_events
-            (group_id, owner_user_id, created_by, title, description, location,
+            (id, group_id, owner_user_id, created_by, title, description, location,
              starts_at, ends_at, all_day, category_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
          RETURNING id",
     )
+    .bind(payload.offline_id.unwrap_or_else(Uuid::new_v4))
     .bind(group_id)
     .bind(owner_user_id)
     .bind(scope.acting_user())
