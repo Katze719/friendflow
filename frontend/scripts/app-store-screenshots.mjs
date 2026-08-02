@@ -297,6 +297,7 @@ async function runAccessibilityLayoutChecks(browser) {
             await page.getByText(scene.ready).first().waitFor({ timeout: 10_000 });
             await page.waitForTimeout(100);
             await assertResponsiveLayout(page, caseName);
+            await assertMobileScrollContainer(page, caseName);
           } finally {
             await page.close();
           }
@@ -307,6 +308,7 @@ async function runAccessibilityLayoutChecks(browser) {
           await settingsPage.goto(`${baseUrl}/me/settings`, { waitUntil: "networkidle" });
           await settingsPage.locator('[data-testid="settings-hub"]').waitFor({ timeout: 10_000 });
           await assertResponsiveLayout(settingsPage, settingsCaseName);
+          await assertMobileScrollContainer(settingsPage, settingsCaseName);
           await assertSettingsHub(settingsPage, settingsCaseName);
           await assertPreferences(settingsPage, settingsCaseName);
         } finally {
@@ -559,6 +561,57 @@ async function assertResponsiveLayout(page, caseName) {
 
   if (failures.length > 0) {
     throw new Error(`${caseName}: ${failures.join("; ")}\n${JSON.stringify(result, null, 2)}`);
+  }
+}
+
+async function assertMobileScrollContainer(page, caseName) {
+  const result = await page.locator("main").evaluate((main) => {
+    const style = getComputedStyle(main);
+    const initialScrollTop = main.scrollTop;
+    const availableScroll = Math.max(0, main.scrollHeight - main.clientHeight);
+    main.scrollTop = Math.min(200, availableScroll);
+    const scrolledTop = main.scrollTop;
+    main.scrollTop = initialScrollTop;
+
+    return {
+      documentClientHeight: document.documentElement.clientHeight,
+      documentScrollHeight: document.documentElement.scrollHeight,
+      clientHeight: main.clientHeight,
+      scrollHeight: main.scrollHeight,
+      availableScroll,
+      overflowX: style.overflowX,
+      overflowY: style.overflowY,
+      touchAction: style.touchAction,
+      scrolledTop,
+    };
+  });
+
+  const failures = [];
+  if (result.overflowY !== "auto") {
+    failures.push(`expected main overflow-y auto, found ${result.overflowY}`);
+  }
+  if (result.overflowX !== "hidden") {
+    failures.push(`expected main overflow-x hidden, found ${result.overflowX}`);
+  }
+  if (result.touchAction !== "pan-y") {
+    failures.push(`expected main touch-action pan-y, found ${result.touchAction}`);
+  }
+  if (result.documentScrollHeight > result.documentClientHeight + 1) {
+    failures.push(
+      `document scrolls vertically (${result.documentClientHeight}/${result.documentScrollHeight})`,
+    );
+  }
+  if (result.availableScroll > 0 && result.scrolledTop <= 0) {
+    failures.push(
+      `main is not vertically scrollable (${result.clientHeight}/${result.scrollHeight}, scrollTop ${result.scrolledTop})`,
+    );
+  }
+  if (result.availableScroll === 0 && result.scrolledTop !== 0) {
+    failures.push(`short main created a scroll offset of ${result.scrolledTop}`);
+  }
+
+  if (failures.length > 0) {
+    throw new Error(`${caseName}: ${failures.join("; ")}`);
   }
 }
 

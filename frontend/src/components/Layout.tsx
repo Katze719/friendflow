@@ -71,7 +71,9 @@ export default function Layout({ children }: { children: ReactNode }) {
   }, [isAdmin]);
 
   return (
-    <div className="flex min-h-full w-full min-w-0 max-w-full flex-col overflow-x-clip">
+    <div
+      className="flex min-h-full w-full min-w-0 max-w-full flex-col overflow-x-clip max-sm:h-full max-sm:min-h-0 max-sm:overflow-hidden"
+    >
       <header className="sticky top-0 z-20 border-b border-slate-200/70 bg-white/80 backdrop-blur pt-safe dark:border-slate-800/70 dark:bg-slate-950/70">
         <div className="mx-auto flex w-full min-w-0 max-w-5xl items-center justify-between gap-2 px-safe py-3">
           <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -219,7 +221,9 @@ export default function Layout({ children }: { children: ReactNode }) {
           </div>
         </div>
       )}
-      <main className="mx-auto w-full min-w-0 max-w-5xl flex-1 px-safe py-6 pb-[calc(96px+env(safe-area-inset-bottom))] sm:pb-6">
+      <main
+        className="mx-auto w-full min-w-0 max-w-5xl flex-1 px-safe py-6 pb-[calc(96px+env(safe-area-inset-bottom))] max-sm:min-h-0 max-sm:overflow-y-auto max-sm:overflow-x-hidden max-sm:[touch-action:pan-y] max-sm:[-webkit-overflow-scrolling:touch] sm:pb-6"
+      >
         {children}
       </main>
       <footer className="hidden border-t border-slate-200/70 bg-white/60 pb-safe dark:border-slate-800/70 dark:bg-slate-950/60 sm:block">
