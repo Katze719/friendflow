@@ -19,6 +19,7 @@ import { groupsApi } from "../api/groups";
 import type { GroupSummary } from "../api/types";
 import LoadingState from "../components/LoadingState";
 import { useAuth } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
 import {
   dismissOnboarding,
   isOnboardingDismissed,
@@ -30,6 +31,7 @@ import { useToast } from "../ui/UIProvider";
 export default function Dashboard() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { focusedMode } = useTheme();
   const [groups, setGroups] = useState<GroupSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -72,15 +74,28 @@ export default function Dashboard() {
   return (
     <div className="space-y-8">
       <section>
-        <p className="text-sm font-medium text-brand-600 dark:text-brand-400">{t("dashboard.eyebrow")}</p>
-        <div className="mt-1 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-              {t("dashboard.greeting", { name: firstName })}
-            </h1>
-            <p className="mt-2 max-w-2xl text-slate-600 dark:text-slate-300">{t("dashboard.subtitle")}</p>
-          </div>
-          <div className="grid w-full min-w-0 grid-cols-2 gap-2 sm:flex sm:w-auto">
+        {!focusedMode ? (
+          <p className="text-sm font-medium text-brand-600 dark:text-brand-400">
+            {t("dashboard.eyebrow")}
+          </p>
+        ) : null}
+        <div
+          className={`${focusedMode ? "" : "mt-1 "}flex flex-wrap items-start justify-between gap-3`}
+        >
+          {!focusedMode ? (
+            <div data-testid="dashboard-intro">
+              <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                {t("dashboard.greeting", { name: firstName })}
+              </h1>
+              <p className="mt-2 max-w-2xl text-slate-600 dark:text-slate-300">
+                {t("dashboard.subtitle")}
+              </p>
+            </div>
+          ) : null}
+          <div
+            className="grid w-full min-w-0 grid-cols-2 gap-2 sm:flex sm:w-auto"
+            data-testid="dashboard-actions"
+          >
             <button
               className="btn-secondary min-w-0 sm:flex-none"
               onClick={() => {

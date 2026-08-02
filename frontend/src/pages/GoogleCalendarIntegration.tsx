@@ -5,10 +5,12 @@ import { Link, useSearchParams } from "react-router-dom";
 import { ApiError } from "../api/client";
 import { googleCalendarApi } from "../api/googleCalendar";
 import LoadingState from "../components/LoadingState";
+import { useTheme } from "../context/ThemeContext";
 import { useToast } from "../ui/UIProvider";
 
 export default function GoogleCalendarIntegration() {
   const { t } = useTranslation();
+  const { focusedMode } = useTheme();
   const toast = useToast();
   const [params, setParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
@@ -89,24 +91,26 @@ export default function GoogleCalendarIntegration() {
         >
           {t("layout.backToDashboard")}
         </Link>
-        <div className="mt-4 flex items-start gap-3">
-          <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white">
-            <CalendarPlus className="h-6 w-6" />
-          </span>
-          <div>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <h1 className="text-2xl font-semibold tracking-tight">
-                {t("integrations.googleCalendar.title")}
-              </h1>
-              <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-                {t("group.experimental")}
-              </span>
+        {!focusedMode ? (
+          <div className="mt-4 flex items-start gap-3">
+            <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white">
+              <CalendarPlus className="h-6 w-6" />
+            </span>
+            <div>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <h1 className="text-2xl font-semibold tracking-tight">
+                  {t("integrations.googleCalendar.title")}
+                </h1>
+                <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                  {t("group.experimental")}
+                </span>
+              </div>
+              <p className="mt-1 text-slate-600 dark:text-slate-400">
+                {t("integrations.googleCalendar.subtitle")}
+              </p>
             </div>
-            <p className="mt-1 text-slate-600 dark:text-slate-400">
-              {t("integrations.googleCalendar.subtitle")}
-            </p>
           </div>
-        </div>
+        ) : null}
       </div>
 
       <section className="card space-y-4 p-5">

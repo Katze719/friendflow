@@ -235,6 +235,7 @@ export default function PersonalTasksPage() {
         backLink={{ to: "/", label: t("layout.backToDashboard") }}
         title={t("tasks.personal.title")}
         subtitle={t("tasks.personal.subtitle")}
+        hideTextInFocusedMode
         actions={
           <button
             type="button"

@@ -58,6 +58,10 @@ const es: Translations = {
     "headerIcon": {
       "title": "Icono del encabezado",
       "subtitle": "Muestra el icono de friendflow junto al nombre en el encabezado de la app."
+    },
+    "focusedMode": {
+      "title": "Modo de concentración",
+      "subtitle": "Oculta los títulos y las descripciones introductorias para ofrecer una vista más compacta."
     }
   },
   "layout": {

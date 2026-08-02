@@ -23,6 +23,7 @@ export type AccentPreference =
 const STORAGE_KEY = "friendflow.theme";
 const ACCENT_STORAGE_KEY = "friendflow.accent";
 const HEADER_ICON_STORAGE_KEY = "friendflow.headerIcon";
+const FOCUSED_MODE_STORAGE_KEY = "friendflow.focusedMode";
 const ACCENT_THEME_COLORS: Record<AccentPreference, string> = {
   indigo: "#4f46e5",
   ocean: "#0369a1",
@@ -44,6 +45,8 @@ interface ThemeContextValue {
   setAccent: (accent: AccentPreference) => void;
   showHeaderIcon: boolean;
   setShowHeaderIcon: (show: boolean) => void;
+  focusedMode: boolean;
+  setFocusedMode: (enabled: boolean) => void;
 }
 
 function readStoredAccent(): AccentPreference {
@@ -72,6 +75,14 @@ function readStoredHeaderIcon(): boolean {
     return localStorage.getItem(HEADER_ICON_STORAGE_KEY) !== "hidden";
   } catch {
     return true;
+  }
+}
+
+function readStoredFocusedMode(): boolean {
+  try {
+    return localStorage.getItem(FOCUSED_MODE_STORAGE_KEY) === "enabled";
+  } catch {
+    return false;
   }
 }
 
@@ -123,6 +134,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [accent, setAccentState] = useState<AccentPreference>(() => readStoredAccent());
   const [showHeaderIcon, setShowHeaderIconState] = useState<boolean>(() =>
     readStoredHeaderIcon(),
+  );
+  const [focusedMode, setFocusedModeState] = useState<boolean>(() =>
+    readStoredFocusedMode(),
   );
 
   useEffect(() => {
@@ -179,6 +193,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const setFocusedMode = useCallback((enabled: boolean) => {
+    setFocusedModeState(enabled);
+    try {
+      localStorage.setItem(FOCUSED_MODE_STORAGE_KEY, enabled ? "enabled" : "disabled");
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   const value = useMemo(
     () => ({
       preference,
@@ -188,8 +211,20 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       setAccent,
       showHeaderIcon,
       setShowHeaderIcon,
+      focusedMode,
+      setFocusedMode,
     }),
-    [preference, resolved, setPreference, accent, setAccent, showHeaderIcon, setShowHeaderIcon],
+    [
+      preference,
+      resolved,
+      setPreference,
+      accent,
+      setAccent,
+      showHeaderIcon,
+      setShowHeaderIcon,
+      focusedMode,
+      setFocusedMode,
+    ],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

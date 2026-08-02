@@ -148,6 +148,7 @@ export default function TasksOverviewPage() {
         }}
         title={t("tasks.overview.title")}
         subtitle={`${group.name} - ${t("tasks.overview.subtitle")}`}
+        hideTextInFocusedMode
         actions={
           <button
             type="button"

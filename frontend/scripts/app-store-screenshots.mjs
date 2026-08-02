@@ -106,6 +106,7 @@ const group = {
   created_by: "u1",
   created_at: "2026-02-01T12:00:00.000Z",
   members,
+  people: [],
   my_role: "owner",
 };
 const groupSummary = {
@@ -326,7 +327,7 @@ async function assertSettingsHub(page, caseName) {
   const result = await page.locator('[data-testid="settings-hub"]').evaluate((hub) => ({
     accentAndLanguageOptions: hub.querySelectorAll('[role="radio"]').length,
     themeOptions: hub.querySelectorAll('button[aria-pressed]').length,
-    headerIconSwitches: hub.querySelectorAll('[role="switch"]').length,
+    preferenceSwitches: hub.querySelectorAll('[role="switch"]').length,
     signOutButtons: Array.from(hub.querySelectorAll("button")).filter((button) =>
       /abmelden|sign out/i.test(button.textContent ?? ""),
     ).length,
@@ -338,7 +339,9 @@ async function assertSettingsHub(page, caseName) {
   if (result.themeOptions !== 3) {
     failures.push(`expected 3 display mode options, found ${result.themeOptions}`);
   }
-  if (result.headerIconSwitches !== 1) failures.push("header icon switch is missing");
+  if (result.preferenceSwitches !== 2) {
+    failures.push(`expected 2 preference switches, found ${result.preferenceSwitches}`);
+  }
   if (result.signOutButtons !== 1) failures.push("sign-out action is missing");
   if (failures.length > 0) throw new Error(`${caseName}: ${failures.join("; ")}`);
 }
@@ -378,6 +381,53 @@ async function assertPreferences(page, caseName) {
   }));
   if (languageResult.htmlLang !== "fr" || languageResult.stored !== "fr") {
     throw new Error(`${caseName}: French language was not persisted: ${JSON.stringify(languageResult)}`);
+  }
+
+  const focusedToggle = hub.locator('[data-testid="focused-mode-toggle"]');
+  await focusedToggle.click();
+  const focusedResult = await page.evaluate(() => ({
+    stored: localStorage.getItem("friendflow.focusedMode"),
+    settingsIntroVisible: document.querySelector('[data-testid="page-header-text"]') !== null,
+  }));
+  if (focusedResult.stored !== "enabled" || focusedResult.settingsIntroVisible) {
+    throw new Error(`${caseName}: focused mode was not applied: ${JSON.stringify(focusedResult)}`);
+  }
+
+  await page.reload({ waitUntil: "networkidle" });
+  await page.locator('[data-testid="settings-hub"]').waitFor({ timeout: 10_000 });
+  const persistedFocusedResult = await page.evaluate(() => ({
+    checked: document
+      .querySelector('[data-testid="focused-mode-toggle"]')
+      ?.getAttribute("aria-checked"),
+    settingsIntroVisible: document.querySelector('[data-testid="page-header-text"]') !== null,
+  }));
+  if (
+    persistedFocusedResult.checked !== "true" ||
+    persistedFocusedResult.settingsIntroVisible
+  ) {
+    throw new Error(
+      `${caseName}: focused mode was not restored: ${JSON.stringify(persistedFocusedResult)}`,
+    );
+  }
+
+  await page.goto(`${baseUrl}/`, { waitUntil: "networkidle" });
+  await page.locator('[data-testid="dashboard-actions"]').waitFor({ timeout: 10_000 });
+  const dashboardResult = await page.evaluate(() => ({
+    introVisible: document.querySelector('[data-testid="dashboard-intro"]') !== null,
+    actionButtons: document.querySelectorAll('[data-testid="dashboard-actions"] button').length,
+  }));
+  if (dashboardResult.introVisible || dashboardResult.actionButtons !== 2) {
+    throw new Error(
+      `${caseName}: dashboard focused mode is incorrect: ${JSON.stringify(dashboardResult)}`,
+    );
+  }
+  await assertResponsiveLayout(page, `${caseName}:focused-dashboard`);
+
+  await page.goto(`${baseUrl}/groups/g1`, { waitUntil: "networkidle" });
+  const groupTitle = page.locator('[data-testid="page-header-text"]');
+  await groupTitle.waitFor({ timeout: 10_000 });
+  if (!(await groupTitle.textContent())?.includes("Summer House")) {
+    throw new Error(`${caseName}: the group name was hidden in focused mode`);
   }
 }
 

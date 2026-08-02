@@ -126,6 +126,7 @@ export default function PersonalShoppingPage() {
         backLink={{ to: "/", label: t("layout.backToDashboard") }}
         title={t("shopping.personal.title")}
         subtitle={t("shopping.personal.subtitle")}
+        hideTextInFocusedMode
         actions={
           <button
             className="btn-primary w-full sm:w-auto"

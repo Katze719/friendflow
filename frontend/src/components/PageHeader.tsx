@@ -1,6 +1,7 @@
 import { ArrowLeft } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { useTheme } from "../context/ThemeContext";
 
 export interface PageHeaderBackLink {
   to: string;
@@ -19,12 +20,17 @@ export default function PageHeader({
   title,
   subtitle,
   actions,
+  hideTextInFocusedMode = false,
 }: {
   backLink?: PageHeaderBackLink | null;
   title: string;
   subtitle?: string | null;
   actions?: ReactNode;
+  hideTextInFocusedMode?: boolean;
 }) {
+  const { focusedMode } = useTheme();
+  const showText = !hideTextInFocusedMode || !focusedMode;
+
   return (
     <div>
       {backLink ? (
@@ -39,14 +45,16 @@ export default function PageHeader({
             : "flex flex-wrap items-start justify-between gap-3"
         }
       >
-        <div className="min-w-0">
-          <h1 className="break-words text-2xl font-semibold tracking-tight sm:text-3xl">
-            {title}
-          </h1>
-          {subtitle ? (
-            <p className="truncate text-sm text-slate-500 dark:text-slate-400">{subtitle}</p>
-          ) : null}
-        </div>
+        {showText ? (
+          <div className="min-w-0" data-testid="page-header-text">
+            <h1 className="break-words text-2xl font-semibold tracking-tight sm:text-3xl">
+              {title}
+            </h1>
+            {subtitle ? (
+              <p className="truncate text-sm text-slate-500 dark:text-slate-400">{subtitle}</p>
+            ) : null}
+          </div>
+        ) : null}
         {actions ?? null}
       </div>
     </div>

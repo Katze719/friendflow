@@ -7,6 +7,7 @@ import { ApiError } from "../api/client";
 import type { AdminUserRow } from "../api/types";
 import LoadingState from "../components/LoadingState";
 import { useAuth } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
 import { formatDate } from "../lib/format";
 import { useConfirm } from "../ui/UIProvider";
 
@@ -15,6 +16,7 @@ type StatusFilter = "all" | "pending" | "approved" | "admin";
 export default function AdminUsers() {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { focusedMode } = useTheme();
   const confirm = useConfirm();
   const [users, setUsers] = useState<AdminUserRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -98,10 +100,16 @@ export default function AdminUsers() {
         >
           {t("admin.backToDashboard")}
         </Link>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
-          {t("admin.title")}
-        </h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400">{t("admin.subtitle")}</p>
+        {!focusedMode ? (
+          <>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
+              {t("admin.title")}
+            </h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              {t("admin.subtitle")}
+            </p>
+          </>
+        ) : null}
       </div>
 
       {error && (

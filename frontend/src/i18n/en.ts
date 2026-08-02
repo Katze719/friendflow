@@ -57,6 +57,10 @@ const en = {
       title: "Header icon",
       subtitle: "Show the friendflow icon next to the name in the app header.",
     },
+    focusedMode: {
+      title: "Focused mode",
+      subtitle: "Hide introductory page titles and descriptions for a more compact view.",
+    },
   },
   layout: {
     signOut: "Sign out",

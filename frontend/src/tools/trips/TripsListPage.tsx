@@ -87,6 +87,7 @@ export default function TripsListPage() {
         }}
         title={t("trips.list.title")}
         subtitle={`${group.name} - ${t("trips.list.subtitle")}`}
+        hideTextInFocusedMode
         actions={
           <button
             className="btn-primary w-full sm:w-auto"

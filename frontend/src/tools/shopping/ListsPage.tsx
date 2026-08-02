@@ -84,6 +84,7 @@ export default function ShoppingListsPage() {
         }}
         title={t("shopping.lists.title")}
         subtitle={`${group.name} - ${t("shopping.lists.subtitle")}`}
+        hideTextInFocusedMode
         actions={
           <button
             className="btn-primary w-full sm:w-auto"

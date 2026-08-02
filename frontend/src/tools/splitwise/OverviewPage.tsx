@@ -153,6 +153,7 @@ export default function SplitwiseOverviewPage() {
         }}
         title={t("splitwise.overview.title")}
         subtitle={`${group.name} - ${t("splitwise.overview.members", { count: group.members.length })}`}
+        hideTextInFocusedMode
         actions={
           <div className="flex w-full flex-wrap gap-2 sm:w-auto">
             <button

@@ -59,6 +59,10 @@ const de: Translations = {
       title: "Icon in der Kopfzeile",
       subtitle: "Zeigt das friendflow-Icon neben dem Namen in der App-Kopfzeile.",
     },
+    focusedMode: {
+      title: "Focused Mode",
+      subtitle: "Blendet einleitende Seitentitel und Beschreibungen für eine kompaktere Ansicht aus.",
+    },
   },
   layout: {
     signOut: "Abmelden",

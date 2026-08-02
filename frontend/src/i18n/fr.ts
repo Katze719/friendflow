@@ -58,6 +58,10 @@ const fr: Translations = {
     "headerIcon": {
       "title": "Icône dans l’en-tête",
       "subtitle": "Affiche l’icône friendflow à côté du nom dans l’en-tête de l’application."
+    },
+    "focusedMode": {
+      "title": "Mode concentration",
+      "subtitle": "Masque les titres et descriptions d’introduction pour une vue plus compacte."
     }
   },
   "layout": {

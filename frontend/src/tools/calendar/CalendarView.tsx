@@ -290,6 +290,7 @@ export default function CalendarView({
         backLink={backLink ?? undefined}
         title={title}
         subtitle={subtitle ?? undefined}
+        hideTextInFocusedMode
         actions={
           <button
             className="btn-primary w-full sm:w-auto"

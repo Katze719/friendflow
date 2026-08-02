@@ -46,6 +46,7 @@ export default function GamesOverviewPage() {
         }}
         title={t("games.title")}
         subtitle={`${group.name} - ${t("games.subtitle")}`}
+        hideTextInFocusedMode
       />
       <GroupToolSwitcher groupId={group.id} groupName={group.name} />
 

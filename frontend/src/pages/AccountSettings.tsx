@@ -30,7 +30,7 @@ export default function AccountSettings() {
   const confirm = useConfirm();
   const navigate = useNavigate();
   const { user, logout, setCurrentUser } = useAuth();
-  const { showHeaderIcon, setShowHeaderIcon } = useTheme();
+  const { focusedMode, setFocusedMode, showHeaderIcon, setShowHeaderIcon } = useTheme();
 
   const [displayName, setDisplayName] = useState(user?.display_name ?? "");
   const [profileBusy, setProfileBusy] = useState(false);
@@ -143,6 +143,7 @@ export default function AccountSettings() {
         backLink={{ to: "/", label: t("layout.backToDashboard") }}
         title={t("account.title")}
         subtitle={t("account.subtitle")}
+        hideTextInFocusedMode
       />
 
       <section className="card space-y-5 p-5 sm:p-6">
@@ -237,6 +238,33 @@ export default function AccountSettings() {
             <span
               className={`absolute left-0 top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
                 showHeaderIcon ? "translate-x-6" : "translate-x-1"
+              }`}
+            />
+          </button>
+        </div>
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 px-4 py-3 dark:border-slate-700">
+          <div className="min-w-0">
+            <h3 className="text-sm font-medium text-slate-800 dark:text-slate-100">
+              {t("theme.focusedMode.title")}
+            </h3>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              {t("theme.focusedMode.subtitle")}
+            </p>
+          </div>
+          <button
+            data-testid="focused-mode-toggle"
+            type="button"
+            role="switch"
+            aria-checked={focusedMode}
+            aria-label={t("theme.focusedMode.title")}
+            onClick={() => setFocusedMode(!focusedMode)}
+            className={`relative h-7 w-12 shrink-0 rounded-full transition focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 ${
+              focusedMode ? "bg-brand-600" : "bg-slate-300 dark:bg-slate-600"
+            }`}
+          >
+            <span
+              className={`absolute left-0 top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+                focusedMode ? "translate-x-6" : "translate-x-1"
               }`}
             />
           </button>
