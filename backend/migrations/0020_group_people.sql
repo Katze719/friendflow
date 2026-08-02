@@ -26,6 +26,30 @@ FROM group_members gm
 INNER JOIN users u ON u.id = gm.user_id
 INNER JOIN groups g ON g.id = gm.group_id;
 
+-- People can leave a group while their expenses, splits and payments remain as
+-- historical ledger data. Preserve those account-backed identities as inactive
+-- group people before replacing the old user-only foreign keys below.
+WITH ledger_people AS (
+    SELECT group_id, paid_by AS user_id
+    FROM expenses
+    UNION
+    SELECT e.group_id, es.user_id
+    FROM expense_splits es
+    INNER JOIN expenses e ON e.id = es.expense_id
+    UNION
+    SELECT group_id, from_user AS user_id
+    FROM splitwise_payments
+    UNION
+    SELECT group_id, to_user AS user_id
+    FROM splitwise_payments
+)
+INSERT INTO group_people (group_id, id, user_id, display_name, kind, active, created_by)
+SELECT lp.group_id, lp.user_id, lp.user_id, u.display_name, 'member', FALSE, g.created_by
+FROM ledger_people lp
+INNER JOIN users u ON u.id = lp.user_id
+INNER JOIN groups g ON g.id = lp.group_id
+ON CONFLICT (group_id, user_id) DO NOTHING;
+
 -- Ledger UUID columns now reference a person in the same group. Their names
 -- stay unchanged for wire compatibility; for account-backed people the values
 -- are also unchanged because person id == user id.
