@@ -5,6 +5,14 @@
 @layer base {
   :root,
   :root[data-accent="indigo"] {
+    --safe-area-top: env(safe-area-inset-top, 0px);
+    --safe-area-right: env(safe-area-inset-right, 0px);
+    --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-area-left: env(safe-area-inset-left, 0px);
+    --mobile-bottom-nav-height: 64px;
+    --mobile-content-gap: 24px;
+    --touch-target-size: 44px;
+    --keyboard-height: 0px;
     --brand-50: 238 242 255;
     --brand-100: 224 231 255;
     --brand-200: 199 210 254;
@@ -108,11 +116,17 @@
     max-width: 100%;
     min-width: 0;
   }
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
   html,
   body {
     /* `hidden` is the fallback for older iOS WebViews; `clip` avoids
        creating a document-level horizontal scroll container where supported. */
     overflow-x: hidden;
+    overscroll-behavior: none;
   }
   #root {
     overflow-x: clip;
@@ -126,6 +140,8 @@
   body {
     @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100;
     accent-color: rgb(var(--brand-600));
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
   }
   ::selection {
@@ -139,9 +155,11 @@
   /* Use the dynamic viewport height where available so iOS Safari
      doesn't clip content when the URL bar shows/hides. */
   @supports (height: 100dvh) {
-    html,
-    body,
-    #root {
+    /* Native keyboard resize changes the WebView itself, so native shells use
+       the percentage height above. Browser shells still need dvh for URL bars. */
+    html:not([data-platform="ios"]):not([data-platform="android"]),
+    html:not([data-platform="ios"]):not([data-platform="android"]) body,
+    html:not([data-platform="ios"]):not([data-platform="android"]) #root {
       height: 100dvh;
     }
   }
@@ -152,6 +170,11 @@
   select,
   textarea {
     touch-action: manipulation;
+    scroll-margin-block: 16px;
+  }
+  :focus-visible {
+    outline: 2px solid rgb(var(--brand-500));
+    outline-offset: 2px;
   }
 }
 
@@ -159,17 +182,38 @@
   /* Horizontal padding that respects iOS safe-area in landscape. */
   .px-safe {
     /* Keep layout gutters stable when the user's default font size grows. */
-    padding-left: max(16px, env(safe-area-inset-left));
-    padding-right: max(16px, env(safe-area-inset-right));
+    padding-left: max(16px, var(--safe-area-left));
+    padding-right: max(16px, var(--safe-area-right));
   }
   .pt-safe {
-    padding-top: env(safe-area-inset-top);
+    padding-top: var(--safe-area-top);
   }
   .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom);
+    padding-bottom: var(--safe-area-bottom);
+  }
+  .app-main {
+    padding-bottom: calc(
+      var(--mobile-bottom-nav-height) + var(--mobile-content-gap) +
+        var(--safe-area-bottom)
+    );
+    overscroll-behavior-y: contain;
+    scroll-padding-block: 16px;
+  }
+  .mobile-bottom-nav-inner {
+    height: var(--mobile-bottom-nav-height);
+  }
+  :root[data-keyboard-open="true"] .app-main {
+    padding-bottom: max(16px, var(--safe-area-bottom));
+  }
+  :root[data-keyboard-open="true"] [data-testid="mobile-bottom-nav"] {
+    display: none;
+  }
+  .tap-target {
+    min-height: var(--touch-target-size);
+    min-width: var(--touch-target-size);
   }
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none;
     min-width: 0;
     max-width: 100%;
     padding: 8px 16px;
@@ -182,7 +226,7 @@
     flex-shrink: 0;
   }
   .btn-primary {
-    @apply btn bg-brand-600 text-white hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:focus:ring-offset-slate-950;
+    @apply btn bg-brand-600 text-white hover:bg-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950;
   }
   .btn-secondary {
     @apply btn bg-white text-slate-700 border border-slate-200 hover:bg-slate-100
@@ -198,10 +242,10 @@
   .input {
     @apply w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm
            placeholder:text-slate-400
-           focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30
+           focus:border-brand-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/30
            dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100
            dark:placeholder:text-slate-500
-           dark:focus:border-brand-400 dark:focus:ring-brand-400/30;
+           dark:focus:border-brand-400 dark:focus-visible:ring-brand-400/30;
   }
   .card {
     @apply rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/70
@@ -218,7 +262,7 @@
     @apply inline-flex overflow-hidden rounded-lg border border-slate-200 bg-white p-0.5 text-xs dark:border-slate-700 dark:bg-slate-900;
   }
   .segmented-item {
-    @apply rounded px-2.5 py-1 transition;
+    @apply rounded px-2.5 py-1 transition motion-reduce:transition-none;
   }
   .segmented-item-active {
     @apply bg-brand-600 text-white;
@@ -232,16 +276,67 @@
   /* Smaller controls (e.g. folder <select> on link cards) — same focus language as .input. */
   .input-compact {
     @apply rounded-lg border border-slate-200 bg-white px-1.5 py-0.5 text-xs shadow-sm
-           focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30
+           focus:border-brand-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/30
            dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100
-           dark:focus:border-brand-400 dark:focus:ring-brand-400/30;
+           dark:focus:border-brand-400 dark:focus-visible:ring-brand-400/30;
+  }
+}
+
+/* Native controls should meet the platform-standard 44px target without
+   forcing the roomier sizing on mouse-driven desktop layouts. */
+@media (pointer: coarse) {
+  button,
+  [role="button"],
+  [role="switch"],
+  [role="radio"],
+  select,
+  .btn,
+  .input {
+    /* Utility classes such as h-7/h-8 are common on dense desktop views;
+       coarse pointers still need a reliable physical hit area. */
+    min-height: var(--touch-target-size) !important;
+  }
+  button,
+  [role="button"],
+  [role="switch"] {
+    min-width: var(--touch-target-size) !important;
+  }
+  /* Compact header status: 36px visually, with an invisible 44px pseudo-element
+     retaining a comfortable touch area without increasing header height. */
+  [data-extended-touch-target="true"] {
+    min-height: 2.25rem !important;
+    min-width: 2.25rem !important;
+  }
+  /* Switch tracks stay visually compact while their pseudo-element extends
+     the vertical hit area to the platform-standard 44px. */
+  [data-compact-switch="true"] {
+    min-height: 1.75rem !important;
+    min-width: 3rem !important;
+  }
+}
+
+@media (min-width: 640px) {
+  .app-main {
+    padding-bottom: 24px;
+    overscroll-behavior-y: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
 /* iOS zooms the page when a text-editable control smaller than 16px receives
-   focus. Keep mobile controls at that threshold while preserving the existing
-   compact typography from Tailwind's `sm` breakpoint upwards. */
-@media (max-width: 639px) {
+   focus. Keep controls at that threshold on narrow screens and touch devices,
+   including phones in landscape and iPads above Tailwind's `sm` breakpoint. */
+@media (max-width: 639px), (pointer: coarse) {
   input:not([type="button"]):not([type="checkbox"]):not([type="color"]):not(
       [type="file"]
     ):not([type="hidden"]):not([type="image"]):not([type="radio"]):not(

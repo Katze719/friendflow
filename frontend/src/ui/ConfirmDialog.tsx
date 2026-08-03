@@ -113,7 +113,7 @@ export default function ConfirmDialog({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={message ? descId : undefined}
-        className="relative w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700 sm:rounded-2xl"
+        className="relative max-h-[calc(100%-max(1rem,var(--safe-area-top))-max(1rem,var(--safe-area-bottom)))] w-full max-w-md overflow-y-auto overscroll-contain rounded-2xl bg-white shadow-xl ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700 sm:rounded-2xl"
       >
         <div className="p-5 sm:p-6">
           <h2

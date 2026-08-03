@@ -226,12 +226,14 @@ export default function AccountSettings() {
           </div>
           <button
             data-testid="header-icon-toggle"
+            data-compact-switch="true"
+            data-extended-touch-target="true"
             type="button"
             role="switch"
             aria-checked={showHeaderIcon}
             aria-label={t("theme.headerIcon.title")}
             onClick={() => setShowHeaderIcon(!showHeaderIcon)}
-            className={`relative h-7 w-12 shrink-0 rounded-full transition focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 ${
+            className={`relative h-7 w-12 shrink-0 rounded-full transition before:absolute before:-inset-y-2 before:inset-x-0 before:content-[''] focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 ${
               showHeaderIcon ? "bg-brand-600" : "bg-slate-300 dark:bg-slate-600"
             }`}
           >
@@ -253,12 +255,14 @@ export default function AccountSettings() {
           </div>
           <button
             data-testid="focused-mode-toggle"
+            data-compact-switch="true"
+            data-extended-touch-target="true"
             type="button"
             role="switch"
             aria-checked={focusedMode}
             aria-label={t("theme.focusedMode.title")}
             onClick={() => setFocusedMode(!focusedMode)}
-            className={`relative h-7 w-12 shrink-0 rounded-full transition focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 ${
+            className={`relative h-7 w-12 shrink-0 rounded-full transition before:absolute before:-inset-y-2 before:inset-x-0 before:content-[''] focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 dark:focus:ring-offset-slate-900 ${
               focusedMode ? "bg-brand-600" : "bg-slate-300 dark:bg-slate-600"
             }`}
           >

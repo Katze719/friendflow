@@ -96,7 +96,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             {user && !onDashboard && (
               <Link
                 to="/"
-                className="btn-primary ml-1 shrink-0"
+                className="btn-primary ml-1 hidden shrink-0 sm:inline-flex"
                 aria-label={t("layout.dashboard")}
                 title={t("layout.dashboard")}
               >
@@ -222,7 +222,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         </div>
       )}
       <main
-        className="mx-auto w-full min-w-0 max-w-5xl flex-1 px-safe py-6 pb-[calc(96px+env(safe-area-inset-bottom))] max-sm:min-h-0 max-sm:overflow-y-auto max-sm:overflow-x-hidden max-sm:[touch-action:pan-y] max-sm:[-webkit-overflow-scrolling:touch] sm:pb-6"
+        className="app-main mx-auto w-full min-w-0 max-w-5xl flex-1 px-safe pt-6 max-sm:min-h-0 max-sm:overflow-y-auto max-sm:overflow-x-hidden max-sm:[touch-action:pan-y] max-sm:[-webkit-overflow-scrolling:touch]"
       >
         {children}
       </main>

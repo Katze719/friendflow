@@ -310,6 +310,7 @@ async function runAccessibilityLayoutChecks(browser) {
           await assertResponsiveLayout(settingsPage, settingsCaseName);
           await assertMobileScrollContainer(settingsPage, settingsCaseName);
           await assertSettingsHub(settingsPage, settingsCaseName);
+          await assertKeyboardLayout(settingsPage, settingsCaseName);
           await assertPreferences(settingsPage, settingsCaseName);
         } finally {
           await settingsPage.close();
@@ -320,9 +321,39 @@ async function runAccessibilityLayoutChecks(browser) {
     }
   }
 
+  await runLandscapeLayoutChecks(browser);
+
   console.log(
-    `Accessibility layout checks passed for ${viewports.length * fontScales.length * (scenes.length + 1)} cases.`,
+    `Accessibility layout checks passed for ${viewports.length * fontScales.length * (scenes.length + 1)} portrait cases plus mobile landscape.`,
   );
+}
+
+async function runLandscapeLayoutChecks(browser) {
+  const context = await browser.newContext({
+    viewport: { width: 667, height: 375 },
+    isMobile: true,
+    hasTouch: true,
+    locale: "de-DE",
+    colorScheme: "dark",
+  });
+  await installDemoState(context, { language: "de", rootFontScale: 100 });
+  await context.route(`${baseUrl}/api/**`, mockApiRoute);
+
+  try {
+    for (const scene of scenes) {
+      const page = await context.newPage();
+      const caseName = `landscape:100%:${scene.name}`;
+      try {
+        await page.goto(`${baseUrl}${scene.path}`, { waitUntil: "networkidle" });
+        await page.getByText(scene.ready).first().waitFor({ timeout: 10_000 });
+        await assertResponsiveLayout(page, caseName, { expectCompactShell: false });
+      } finally {
+        await page.close();
+      }
+    }
+  } finally {
+    await context.close();
+  }
 }
 
 async function assertSettingsHub(page, caseName) {
@@ -433,7 +464,77 @@ async function assertPreferences(page, caseName) {
   }
 }
 
-async function assertResponsiveLayout(page, caseName) {
+async function assertKeyboardLayout(page, caseName) {
+  const viewport = page.viewportSize();
+  if (!viewport) throw new Error(`${caseName}: viewport size is unavailable`);
+
+  const reducedHeight = Math.max(360, viewport.height - 280);
+  await page.setViewportSize({ width: viewport.width, height: reducedHeight });
+  await page.evaluate(() => {
+    document.documentElement.dataset.keyboardOpen = "true";
+    document.documentElement.style.setProperty("--keyboard-height", "280px");
+  });
+
+  try {
+    const editable = page.locator("input:not([type=checkbox]):not([type=radio]), textarea, select").first();
+    if ((await editable.count()) > 0) {
+      await editable.focus();
+      await editable.evaluate((element) =>
+        element.scrollIntoView({ block: "nearest", inline: "nearest" }),
+      );
+    }
+
+    const result = await page.evaluate(() => {
+      const nav = document.querySelector('[data-testid="mobile-bottom-nav"]');
+      const main = document.querySelector("main");
+      const active = document.activeElement;
+      const activeRect = active instanceof HTMLElement ? active.getBoundingClientRect() : null;
+      const mainStyle = main ? getComputedStyle(main) : null;
+
+      return {
+        navDisplay: nav ? getComputedStyle(nav).display : null,
+        mainPaddingBottom: mainStyle ? Number.parseFloat(mainStyle.paddingBottom) : null,
+        documentClientHeight: document.documentElement.clientHeight,
+        documentScrollHeight: document.documentElement.scrollHeight,
+        activeRect: activeRect
+          ? { top: activeRect.top, bottom: activeRect.bottom }
+          : null,
+      };
+    });
+
+    const failures = [];
+    if (result.navDisplay !== "none") {
+      failures.push(`bottom navigation remains visible (${result.navDisplay})`);
+    }
+    if (result.mainPaddingBottom === null || result.mainPaddingBottom > 32) {
+      failures.push(`keyboard padding did not collapse (${result.mainPaddingBottom}px)`);
+    }
+    if (result.documentScrollHeight > result.documentClientHeight + 1) {
+      failures.push(
+        `document scrolls with keyboard (${result.documentClientHeight}/${result.documentScrollHeight})`,
+      );
+    }
+    if (
+      result.activeRect &&
+      (result.activeRect.top < -1 || result.activeRect.bottom > reducedHeight + 1)
+    ) {
+      failures.push(
+        `focused control is outside the visible viewport (${JSON.stringify(result.activeRect)})`,
+      );
+    }
+    if (failures.length > 0) {
+      throw new Error(`${caseName}: ${failures.join("; ")}`);
+    }
+  } finally {
+    await page.evaluate(() => {
+      delete document.documentElement.dataset.keyboardOpen;
+      document.documentElement.style.removeProperty("--keyboard-height");
+    });
+    await page.setViewportSize(viewport);
+  }
+}
+
+async function assertResponsiveLayout(page, caseName, { expectCompactShell = true } = {}) {
   const result = await page.evaluate(() => {
     const documentElement = document.documentElement;
     const root = document.getElementById("root");
@@ -468,9 +569,11 @@ async function assertResponsiveLayout(page, caseName) {
       }))
       .filter((control) => control.fontSize < minimumEditableFontSize);
     const nav = document.querySelector('[data-testid="mobile-bottom-nav"]');
+    const main = document.querySelector("main");
     const headerActions = document.querySelector('[data-testid="header-actions"]');
-    const navRect = nav?.getBoundingClientRect() ?? null;
-    const navLinks = nav
+    const navVisible = nav !== null && nav.getClientRects().length > 0;
+    const navRect = navVisible ? nav.getBoundingClientRect() : null;
+    const navLinks = navVisible
       ? Array.from(nav.querySelectorAll("a")).map((link) => {
           const rect = link.getBoundingClientRect();
           return {
@@ -481,6 +584,31 @@ async function assertResponsiveLayout(page, caseName) {
             height: rect.height,
           };
         })
+      : [];
+    const undersizedTouchTargets = window.matchMedia("(pointer: coarse)").matches
+      ? Array.from(
+          document.querySelectorAll(
+            'button, [role="button"], [role="switch"], [role="radio"]',
+          ),
+        )
+          .filter(
+            (element) =>
+              element.getClientRects().length > 0 &&
+              element.getAttribute("data-extended-touch-target") !== "true",
+          )
+          .map((element) => {
+            const rect = element.getBoundingClientRect();
+            return {
+              label:
+                element.getAttribute("aria-label") ||
+                element.getAttribute("title") ||
+                element.textContent?.trim().slice(0, 80) ||
+                element.tagName.toLowerCase(),
+              width: rect.width,
+              height: rect.height,
+            };
+          })
+          .filter((target) => target.width < 43.5 || target.height < 43.5)
       : [];
 
     return {
@@ -504,6 +632,10 @@ async function assertResponsiveLayout(page, caseName) {
           }
         : null,
       navLinks,
+      mainPaddingBottom: main
+        ? Number.parseFloat(getComputedStyle(main).paddingBottom)
+        : null,
+      undersizedTouchTargets,
       headerActionsVisible:
         headerActions !== null && headerActions.getClientRects().length > 0,
     };
@@ -528,12 +660,25 @@ async function assertResponsiveLayout(page, caseName) {
       `editable controls below ${result.minimumEditableFontSize}px: ${JSON.stringify(result.undersizedEditableControls)}`,
     );
   }
-  if (result.headerActionsVisible) {
+  if (result.undersizedTouchTargets.length > 0) {
+    failures.push(
+      `touch targets below 44px: ${JSON.stringify(result.undersizedTouchTargets)}`,
+    );
+  }
+  if (expectCompactShell && result.headerActionsVisible) {
     failures.push("mobile header actions are visible");
   }
-  if (!result.navRect) {
+  if (expectCompactShell && !result.navRect) {
     failures.push("mobile bottom navigation is missing");
-  } else {
+  } else if (expectCompactShell && result.navRect) {
+    if (
+      result.mainPaddingBottom === null ||
+      result.mainPaddingBottom < result.navRect.height
+    ) {
+      failures.push(
+        `main bottom padding ${result.mainPaddingBottom}px does not clear navigation ${result.navRect.height}px`,
+      );
+    }
     if (result.navRect.left < -tolerance || result.navRect.right > result.viewportWidth + tolerance) {
       failures.push(
         `navigation bounds ${result.navRect.left}-${result.navRect.right}px leave the viewport`,
@@ -551,12 +696,16 @@ async function assertResponsiveLayout(page, caseName) {
       if (
         link.width <= 0 ||
         link.height <= 0 ||
+        link.width < 43.5 ||
+        link.height < 43.5 ||
         link.left < -tolerance ||
         link.right > result.viewportWidth + tolerance
       ) {
         failures.push(`navigation link ${link.label} is outside the viewport`);
       }
     }
+  } else if (!expectCompactShell && result.navRect) {
+    failures.push("compact bottom navigation is visible in landscape desktop layout");
   }
 
   if (failures.length > 0) {

@@ -2,6 +2,10 @@
 export default {
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   darkMode: "class",
+  future: {
+    // Avoid sticky hover states after tapping controls in mobile WebViews.
+    hoverOnlyWhenSupported: true,
+  },
   theme: {
     extend: {
       fontFamily: {

@@ -54,7 +54,7 @@ function ToastItem({ toast, onDismiss }: ItemProps) {
         onClick={() => onDismiss(toast.id)}
         aria-label={t("common.dismiss")}
         title={t("common.dismiss")}
-        className="shrink-0 rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+        className="tap-target -my-2 -mr-2 shrink-0 rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300"
       >
         <X className="h-4 w-4" />
       </button>

@@ -166,7 +166,8 @@ export function SyncStatusIndicator() {
     <button
       type="button"
       onClick={refresh}
-      className={`inline-flex min-h-9 items-center gap-1.5 rounded-full bg-slate-100 px-2.5 text-xs font-medium dark:bg-slate-800 ${tone}`}
+      data-extended-touch-target="true"
+      className={`relative inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full bg-slate-100 px-2.5 text-xs font-medium before:absolute before:-inset-1 before:content-[''] dark:bg-slate-800 ${tone}`}
       title={label}
       aria-label={label}
     >
